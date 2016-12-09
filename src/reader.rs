@@ -128,6 +128,8 @@ impl<R: io::Read> Reader<R> {
         self.decompressor.read(buffer)?;
 
         // Skip padding.
+        let lap = self.header.lane_padding();
+        println!("lap {:?}", lap);
         for _ in 0..self.header.lane_padding() {
             self.decompressor.read_u8()?;
         }
@@ -143,7 +145,7 @@ impl<R: io::Read> Reader<R> {
     ///
     /// Returns number of colors in palette or zero if there is no palette. The actual number of bytes written to the output buffer is
     /// equal to the returned value multiplied by 3. Format of the output buffer is R, G, B, R, G, B, ...
-    pub fn read_palette(mut self, buffer: &mut [u8]) -> io::Result<usize> {
+    pub fn read_palette(self, buffer: &mut [u8]) -> io::Result<usize> {
         match self.header.palette_length() {
             Some(palette_length @ 1 ... 16) => {
                 // Palettes of 16 colors or smaller are stored in the header.
@@ -180,9 +182,74 @@ impl<R: io::Read> Reader<R> {
 
                 &mut buffer[0..(TEMP_BUFFER_LENGTH - pos - 1)].copy_from_slice(&temp_buffer[(pos + 1)..TEMP_BUFFER_LENGTH]);
                 &mut buffer[(TEMP_BUFFER_LENGTH - pos - 1)..PALETTE_LENGTH].copy_from_slice(&temp_buffer[0..pos]);
+
+                return Ok(256);
             }
         }
+    }
+}
 
-        Ok(256)
+#[cfg(test)]
+mod tests {
+    use std::iter;
+
+    use super::{Reader};
+    use header;
+
+    #[test]
+    fn gmarbles() {
+        let data = include_bytes!("../test-data/gmarbles.pcx");
+        let read = &mut &data[..];
+        let mut reader = Reader::new(read).unwrap();
+
+        println!("{:?}", reader.header);
+
+        assert_eq!(reader.header.version, header::Version::V5);
+        assert_eq!(reader.header.is_compressed, true);
+        assert_eq!(reader.header.bit_depth, 8);
+        assert_eq!(reader.header.size, (141, 99));
+        assert_eq!(reader.header.start, (0, 0));
+        assert_eq!(reader.header.dpi, (300, 300));
+        assert_eq!(reader.header.number_of_color_planes, 1);
+        assert_eq!(reader.header.lane_length, 142);
+
+        assert!(reader.is_paletted());
+        assert_eq!(reader.palette_length(), Some(256));
+
+        let mut row : Vec<u8> = iter::repeat(0).take(reader.size().0 as usize).collect();
+        for _ in 0..reader.size().1 {
+            reader.next_row_paletted(&mut row[..]).unwrap();
+        }
+
+        let mut palette = [0; 256*3];
+        assert_eq!(reader.read_palette(&mut palette).unwrap(), 256);
+    }
+
+    #[test]
+    fn marbles() {
+        let data = include_bytes!("../test-data/marbles.pcx");
+        let read = &mut &data[..];
+        let mut reader = Reader::new(read).unwrap();
+
+        assert_eq!(reader.header.version, header::Version::V5);
+        assert!(reader.header.is_compressed);
+        assert_eq!(reader.header.bit_depth, 8);
+        assert_eq!(reader.header.size, (143, 101));
+        assert_eq!(reader.header.start, (0, 0));
+        assert_eq!(reader.header.dpi, (300, 300));
+        assert_eq!(reader.header.number_of_color_planes, 3);
+        assert_eq!(reader.header.lane_length, 144);
+
+        assert_eq!(reader.is_paletted(), false);
+
+        let mut r : Vec<u8> = iter::repeat(0).take(reader.size().0 as usize).collect();
+        let mut g : Vec<u8> = iter::repeat(0).take(reader.size().0 as usize).collect();
+        let mut b : Vec<u8> = iter::repeat(0).take(reader.size().0 as usize).collect();
+        for _ in 0..reader.size().1 {
+            reader.next_row_rgb(&mut r[..], &mut g[..], &mut b[..]).unwrap();
+        }
+
+        let mut palette = [0; 0];
+        assert_eq!(reader.read_palette(&mut palette).unwrap(), 0);
     }
 }

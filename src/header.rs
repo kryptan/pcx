@@ -26,7 +26,7 @@ typedef struct _PcxHeader
 */
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Version {
     V0 = 0,
     V2 = 2,
@@ -83,7 +83,7 @@ impl Header {
             3 => Version::V3,
             4 => Version::V4,
             5 => Version::V5,
-            v => return error("unknown PCX version"),
+            _ => return error("unknown PCX version"),
         };
 
         let encoding = stream.read_u8()?;
@@ -113,7 +113,7 @@ impl Header {
         let _reserved_0 = stream.read_u8()?;
         let number_of_color_planes = stream.read_u8()?;
         let lane_length = stream.read_u16::<LittleEndian>()?;
-        let palette_kind = stream.read_u16::<LittleEndian>()?;
+        let _palette_kind = stream.read_u16::<LittleEndian>()?;
 
         let mut _reserved_1 = [0; 58];
         stream.read_exact(&mut _reserved_1)?;
@@ -146,7 +146,7 @@ impl Header {
 
     /// Length of each lane without padding.
     pub fn lane_proper_length(&self) -> u16 {
-        ((self.number_of_color_planes as u32)*(self.size.0 as u32)*(self.bit_depth as u32)/8) as u16
+        (((self.size.0 as u32)*(self.bit_depth as u32) - 1)/8 + 1) as u16
     }
 
     /// Number of padding bytes in each lane.
