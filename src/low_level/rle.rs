@@ -1,16 +1,14 @@
-//! This module provides implementation of compression/decompression using variant of RLE (run-length-encoding) used in PCX files.
-//!
-//! You generally don't need to use this module.
+//! Implementation of compression/decompression using variant of RLE (run-length-encoding) used in PCX files.
 
 use std::io;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
 /// Decompress RLE.
 pub struct Decompressor<S : io::Read> {
-	stream : S,
+    stream : S,
 
-	run_count : u8,
-	run_value : u8,
+    run_count : u8,
+    run_value : u8,
 }
 
 impl<S : io::Read> Decompressor<S> {
@@ -32,13 +30,13 @@ impl<S : io::Read> Decompressor<S> {
 impl<S : io::Read> io::Read for Decompressor<S> {
     fn read(&mut self, mut buffer: &mut [u8]) -> io::Result<usize> {
         let mut read = 0;
-    	while buffer.len() > 0 {
-			// Write the pixel run to the buffer.
-			while self.run_count > 0 && buffer.len() > 0 {
+        while buffer.len() > 0 {
+            // Write the pixel run to the buffer.
+            while self.run_count > 0 && buffer.len() > 0 {
                 buffer.write_u8(self.run_value)?;
                 self.run_count -= 1;
                 read += 1;
-			};
+            };
 
             if buffer.len() == 0 {
                 return Ok(read);
@@ -52,14 +50,14 @@ impl<S : io::Read> io::Read for Decompressor<S> {
                 byte_buffer[0]
             };
 
-	    	if (byte & 0xC0) != 0xC0 { // 1-byte code
+            if (byte & 0xC0) != 0xC0 { // 1-byte code
                 buffer.write_u8(byte)?;
                 read += 1;
-			} else { // 2-byte code
-				self.run_count = byte & 0x3F;
-		        self.run_value = self.stream.read_u8()?;
-			}
-	    }
+            } else { // 2-byte code
+                self.run_count = byte & 0x3F;
+                self.run_value = self.stream.read_u8()?;
+            }
+        }
 
         Ok(read)
     }

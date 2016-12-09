@@ -1,10 +1,10 @@
 use std::io;
 use std::io::Write;
-use header;
 use byteorder::WriteBytesExt;
 
-use rle::Compressor;
-use PALETTE_START;
+use low_level::header;
+use low_level::rle::Compressor;
+use low_level::PALETTE_START;
 
 /// Create 24-bit RGB PCX image.
 pub struct WriterRgb<W: io::Write> {
@@ -46,7 +46,7 @@ impl<W: io::Write> WriterRgb<W> {
 
 impl<W: io::Write> Drop for WriterRgb<W> {
     fn drop(&mut self) {
-        self.compressor.flush();
+        let _r = self.compressor.flush();
     }
 }
 

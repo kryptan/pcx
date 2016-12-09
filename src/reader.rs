@@ -3,8 +3,8 @@ use std::path::Path;
 use std::fs::File;
 use byteorder::ReadBytesExt;
 
-use {Header, PALETTE_START};
-use rle::Decompressor;
+use low_level::{Header, PALETTE_START};
+use low_level::rle::Decompressor;
 
 /// PCX file reader.
 pub struct Reader<R: io::Read> {
@@ -113,12 +113,10 @@ impl<R: io::Read> Reader<R> {
         self.next_lane(b)
     }
 
-    /// This is a low-level function and it is not recommended to call it directly. Use `next_row()` instead.
-    ///
-    /// Read next lane. Format is dependent on file format. Buffer length must be equal to `Header::lane_proper_length()`, otherwise this method will panic.
-    ///
-    /// Order of lanes is from top to bottom.
-    pub fn next_lane(&mut self, buffer: &mut [u8]) -> io::Result<()> {
+    // Read next lane. Format is dependent on file format. Buffer length must be equal to `Header::lane_proper_length()`, otherwise this method will panic.
+    //
+    // Order of lanes is from top to bottom.
+    fn next_lane(&mut self, buffer: &mut [u8]) -> io::Result<()> {
         use std::io::Read;
 
         if buffer.len() != self.header.lane_proper_length() as usize {
@@ -194,7 +192,7 @@ mod tests {
     use std::iter;
 
     use super::{Reader};
-    use header;
+    use low_level::header;
 
     #[test]
     fn gmarbles() {

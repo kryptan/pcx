@@ -1,7 +1,8 @@
+//! PCX file header.
 use std::io;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use MAGIC_BYTE;
+use low_level::MAGIC_BYTE;
 
 /*
 typedef struct _PcxHeader
@@ -27,6 +28,7 @@ typedef struct _PcxHeader
 } PCXHEAD;
 */
 
+/// File format version.
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Version {
@@ -172,6 +174,7 @@ impl Header {
     }
 }
 
+/// Write header to the stream.
 pub fn write<W: io::Write>(stream : &mut W, paletted : bool, size : (u16, u16), dpi : (u16, u16)) -> io::Result<()> {
     if size.0 == 0xFFFF { // we'll need to round width up to even number which is not possible for 0xFFFF due to overflow
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with width equal to 0xFFFF"))
