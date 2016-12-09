@@ -1,8 +1,6 @@
 use std::io;
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use DecodingError;
-
 /*
 typedef struct _PcxHeader
 {
@@ -68,11 +66,15 @@ pub struct Header {
     pub lane_length : u16,
 }
 
+fn error<T>(msg : &str) -> io::Result<T> {
+    Err(io::Error::new(io::ErrorKind::InvalidData, msg))
+}
+
 impl Header {
-    pub fn load<R : io::Read>(stream : &mut R) -> Result<Self, DecodingError> {
+    pub fn load<R : io::Read>(stream : &mut R) -> io::Result<Self> {
         let magic = stream.read_u8()?;
         if magic != 0xA {
-            return Err(DecodingError::NotPcx);
+            return error("not a PCX file");
         }
 
         let version = match stream.read_u8()? {
@@ -81,18 +83,15 @@ impl Header {
             3 => Version::V3,
             4 => Version::V4,
             5 => Version::V5,
-            v => return Err(DecodingError::UnknownVersion(v)),
+            v => return error("unknown PCX version"),
         };
 
         let encoding = stream.read_u8()?;
         if encoding != 0 && encoding != 1 {
-            return Err(DecodingError::UnknownEncoding(encoding));
+            return error("unknown PCX encoding");
         }
 
         let bit_depth = stream.read_u8()?;
-        if ![1u8, 2, 4, 8].contains(&bit_depth) {
-            return Err(DecodingError::InvalidBitsPerPlane(bit_depth));
-        }
 
         let x_start = stream.read_u16::<LittleEndian>()?;
         let y_start = stream.read_u16::<LittleEndian>()?;
@@ -100,7 +99,7 @@ impl Header {
         let y_end = stream.read_u16::<LittleEndian>()?;
 
         if x_end < x_start || y_end < y_start {
-            return Err(DecodingError::InvalidData);
+            return error("invalid dimensions");
         }
 
         let x_dpi = stream.read_u16::<LittleEndian>()?;
@@ -112,19 +111,27 @@ impl Header {
         }
 
         let _reserved_0 = stream.read_u8()?;
-
         let number_of_color_planes = stream.read_u8()?;
-        if ![1u8, 3, 4].contains(&number_of_color_planes) {
-            return Err(DecodingError::InvalidNumberOfPlanes(number_of_color_planes));
-        }
-
         let lane_length = stream.read_u16::<LittleEndian>()?;
         let palette_kind = stream.read_u16::<LittleEndian>()?;
 
         let mut _reserved_1 = [0; 58];
         stream.read_exact(&mut _reserved_1)?;
 
-        let header = Header{
+        // Must be one of the supported format.
+        match (number_of_color_planes, bit_depth) {
+            (3, 8) | // 24-bit RGB
+            (1, 1) | // monochrome
+            (1, 2) | // 4-color palette
+            (1, 4) | // 16-color palette
+            (1, 8) | // 256-color palette
+            (2, 1) |
+            (3, 1) |
+            (4, 1) => {},
+            _ => return error("invalid or unsupported color format"),
+        }
+
+        Ok(Header{
             version : version,
             is_compressed : encoding == 1,
             bit_depth : bit_depth,
@@ -134,14 +141,7 @@ impl Header {
             palette : palette,
             number_of_color_planes : number_of_color_planes,
             lane_length : lane_length,
-        };
-
-        match header.palette_length() {
-            None | Some(1 ... 16) | Some(256) => {},
-            _ => return Err(DecodingError::InvalidData),
-        }
-
-        Ok(header)
+        })
     }
 
     /// Length of each lane without padding.
@@ -157,7 +157,6 @@ impl Header {
     pub fn palette_length(&self) -> Option<u16> {
         match (self.number_of_color_planes, self.bit_depth) {
             (3, 8) => None,
-            (1, 8) => Some(256),
             (number_of_color_planes, bit_depth) => Some((1 << bit_depth as u16)*(number_of_color_planes as u16)),
         }
     }
