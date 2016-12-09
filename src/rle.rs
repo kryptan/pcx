@@ -5,7 +5,7 @@
 use std::io;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
-/// Decompress RLE (run-length-encoding) used in PCX files.
+/// Decompress RLE.
 pub struct Decompressor<S : io::Read> {
 	stream : S,
 
@@ -44,11 +44,13 @@ impl<S : io::Read> io::Read for Decompressor<S> {
                 return Ok(read);
             }
 
-	    	let mut byte_buffer = [0; 1];
-            if self.stream.read(&mut byte_buffer)? == 0 {
-                return Ok(read);
-            }
-            let byte = byte_buffer[0];
+            let byte = {
+                let mut byte_buffer = [0; 1];
+                if self.stream.read(&mut byte_buffer)? == 0 {
+                    return Ok(read);
+                }
+                byte_buffer[0]
+            };
 
 	    	if (byte & 0xC0) != 0xC0 { // 1-byte code
                 buffer.write_u8(byte)?;
@@ -65,11 +67,14 @@ impl<S : io::Read> io::Read for Decompressor<S> {
 
 /// Compress using RLE.
 ///
-/// Warning: compressor does not implement `Drop` and will not automatically get flushed on destruction. Call `finish` to flush it.
+/// Warning: compressor does not implement `Drop` and will not automatically get flushed on destruction. Call `finish` or `flush` to flush it.
 /// If it would implement `Drop` it would be impossible to implement `finish()` due to
 /// [restrictions](https://doc.rust-lang.org/error-index.html#E0509) of the Rust language.
 pub struct Compressor<S : io::Write> {
     stream : S,
+
+    lane_length : u16,
+    lane_position : u16,
 
     run_count : u8,
     run_value : u8,
@@ -77,12 +82,24 @@ pub struct Compressor<S : io::Write> {
 
 impl<S : io::Write> Compressor<S> {
     /// Create new compressor which will write to the stream.
-    pub fn new(stream : S) -> Self {
+    pub fn new(stream : S, lane_length : u16) -> Self {
         Compressor {
             stream : stream,
             run_count : 0,
             run_value : 0,
+            lane_length : lane_length,
+            lane_position : 0,
         }
+    }
+
+    pub fn pad(&mut self) -> io::Result<()> {
+        use std::io::Write;
+
+        while self.lane_position != 0 {
+            self.write(&[0])?;
+        }
+
+        Ok(())
     }
 
     /// Stop compression process and get underlying stream.
@@ -114,17 +131,24 @@ impl<S : io::Write> io::Write for Compressor<S> {
         let mut written = 0;
 
         while buffer.len() > 0 {
-            let mut byte_buffer = [0; 1];
-            if buffer.read(&mut byte_buffer)? == 0 {
-                return Ok(written);
-            }
+            let byte = {
+                let mut byte_buffer = [0; 1];
+                if buffer.read(&mut byte_buffer)? == 0 {
+                    return Ok(written);
+                }
+                byte_buffer[0]
+            };
 
-            let byte = byte_buffer[0];
+            self.lane_position += 1;
             written += 1;
 
-            if byte == self.run_value && self.run_count < 62 {
+            if byte == self.run_value && self.run_count < 62 && self.lane_position != self.lane_length {
                 self.run_count += 1;
                 continue;
+            }
+
+            if self.lane_position ==  self.lane_length {
+                self.lane_position = 0;
             }
 
             self.flush_compressor()?;
@@ -141,13 +165,6 @@ impl<S : io::Write> io::Write for Compressor<S> {
         self.stream.flush()
     }
 }
-/*
-impl<S : io::Write> Drop for Compressor<S> {
-    fn drop(&mut self) {
-        // Destructors should not panic, so we ignore a failed flush.
-        let r_ = self.flush_compressor();
-    }
-}*/
 
 #[cfg(test)]
 mod tests {
@@ -160,7 +177,7 @@ mod tests {
         let mut compressed = Vec::new();
 
         {
-            let mut compressor = Compressor::new(&mut compressed);
+            let mut compressor = Compressor::new(&mut compressed, 8);
             compressor.write_all(&data).unwrap();
             compressor.flush().unwrap();
         }
@@ -178,7 +195,7 @@ mod tests {
         let mut compressed = Vec::new();
 
         {
-            let mut compressor = Compressor::new(&mut compressed);
+            let mut compressor = Compressor::new(&mut compressed, 16);
             for &d in data {
                 compressor.write_u8(d).unwrap();
             }

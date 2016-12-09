@@ -1,5 +1,7 @@
 use std::io;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+
+use MAGIC_BYTE;
 
 /*
 typedef struct _PcxHeader
@@ -70,10 +72,14 @@ fn error<T>(msg : &str) -> io::Result<T> {
     Err(io::Error::new(io::ErrorKind::InvalidData, msg))
 }
 
+fn lane_proper_length(width : u16, bit_depth : u8) -> u16 {
+    (((width as u32)*(bit_depth as u32) - 1)/8 + 1) as u16
+}
+
 impl Header {
     pub fn load<R : io::Read>(stream : &mut R) -> io::Result<Self> {
         let magic = stream.read_u8()?;
-        if magic != 0xA {
+        if magic != MAGIC_BYTE {
             return error("not a PCX file");
         }
 
@@ -99,7 +105,7 @@ impl Header {
         let y_end = stream.read_u16::<LittleEndian>()?;
 
         if x_end < x_start || y_end < y_start {
-            return error("invalid dimensions");
+            return error("PCX: invalid dimensions");
         }
 
         let x_dpi = stream.read_u16::<LittleEndian>()?;
@@ -128,7 +134,11 @@ impl Header {
             (2, 1) |
             (3, 1) |
             (4, 1) => {},
-            _ => return error("invalid or unsupported color format"),
+            _ => return error("PCX: invalid or unsupported color format"),
+        }
+
+        if lane_length < lane_proper_length(x_end - x_start, bit_depth) {
+            return error("PCX: invalid lane length");
         }
 
         Ok(Header{
@@ -146,7 +156,7 @@ impl Header {
 
     /// Length of each lane without padding.
     pub fn lane_proper_length(&self) -> u16 {
-        (((self.size.0 as u32)*(self.bit_depth as u32) - 1)/8 + 1) as u16
+        lane_proper_length(self.size.0, self.bit_depth)
     }
 
     /// Number of padding bytes in each lane.
@@ -160,4 +170,41 @@ impl Header {
             (number_of_color_planes, bit_depth) => Some((1 << bit_depth as u16)*(number_of_color_planes as u16)),
         }
     }
+}
+
+pub fn write<W: io::Write>(stream : &mut W, paletted : bool, size : (u16, u16), dpi : (u16, u16)) -> io::Result<()> {
+    if size.0 == 0xFFFF { // we'll need to round width up to even number which is not possible for 0xFFFF due to overflow
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with width equal to 0xFFFF"))
+    }
+
+    // Write header.
+    stream.write_u8(MAGIC_BYTE)?;
+    stream.write_u8(Version::V5 as u8)?;
+    stream.write_u8(1)?; // encoding = compressed
+    stream.write_u8(8)?; // bit depth
+    stream.write_u16::<LittleEndian>(0)?; // x_start
+    stream.write_u16::<LittleEndian>(0)?; // y_start
+    stream.write_u16::<LittleEndian>(size.0)?;
+    stream.write_u16::<LittleEndian>(size.1)?;
+    stream.write_u16::<LittleEndian>(dpi.0)?;
+    stream.write_u16::<LittleEndian>(dpi.1)?;
+
+    // Write 16-color palette (not used as we will use 256-color palette instead).
+    for _ in 0..16 {
+        stream.write(&[0, 0, 0])?;
+    }
+
+    let lane_length = size.0 + (size.0 & 1); // width rounded up to even
+
+    stream.write_u8(0)?; // reserved
+    stream.write_u8(if paletted { 1 } else { 3 })?; // number of color planes
+    stream.write_u16::<LittleEndian>(lane_length)?;
+    stream.write_u16::<LittleEndian>(1)?; // palette kind (not used)
+
+    // Unused values in header.
+    for _ in 0..58 {
+        stream.write(&[0])?;
+    }
+
+    Ok(())
 }

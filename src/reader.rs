@@ -3,7 +3,7 @@ use std::path::Path;
 use std::fs::File;
 use byteorder::ReadBytesExt;
 
-use Header;
+use {Header, PALETTE_START};
 use rle::Decompressor;
 
 /// PCX file reader.
@@ -176,7 +176,7 @@ impl<R: io::Read> Reader<R> {
                 pos = (pos + read) % TEMP_BUFFER_LENGTH;
             } else {
                 // We've reached the end of file, therefore temp_buffer must now contain the palette.
-                if temp_buffer[pos] != 0xC {
+                if temp_buffer[pos] != PALETTE_START {
                     return Err(io::Error::new(io::ErrorKind::InvalidData, "no 256-color palette"));
                 }
 
