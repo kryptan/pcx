@@ -2,7 +2,6 @@ use std::path::Path;
 use std::fs::File;
 use std::{io, iter};
 use walkdir::WalkDir;
-use std::path;
 use image;
 
 use Reader;
@@ -22,42 +21,14 @@ fn test_file(path : &Path) {
     if pcx.is_paletted() {
         print!("paletted ");
         let mut image = Vec::new();
-        for i in 0..pcx.height() {
+        for _ in 0..pcx.height() {
             let mut row : Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
-        //    println!("{:?}", i);
-          /*  if i == pcx.height() - 1 {
-                println!("aha");
-            }*/
             pcx.next_row_paletted(&mut row).unwrap();
-          //  println!("{:?}", row);
             image.push(row);
         }
 
-     //   let out = File::create("C:/projects/pcx/out.csv").unwrap();
-   //     let mut out = io::BufWriter::new(out);
-
-     //   println!("{:?}", pcx.header);
-
         let mut palette = [0; 256*3];
-        let pl = pcx.read_palette(&mut palette).unwrap();
-
-  /*      println!("{:?}", pl);
-
-        println!("{:?}", &palette[..]);
-
-        writeln!(out, "{{");
-        for y in 0..reference_image.height() {
-            writeln!(out, "{{");
-            for x in 0..reference_image.width() {
-                let i = image[y as usize][x as usize] as usize;
-                let pcx_r = palette[i*3 + 0];
-                let pcx_g = palette[i*3 + 1];
-                let pcx_b = palette[i*3 + 2];
-                write!(out, "{{{},{},{}}}{}", pcx_r, pcx_g, pcx_b, if x == reference_image.width() - 1 { "" } else { "," });
-            }
-            writeln!(out, "}}{}", if y == reference_image.height() - 1 { "" } else { "," });
-        }
-        writeln!(out, "}}");*/
+        pcx.read_palette(&mut palette).unwrap();
 
         for y in 0..reference_image.height() {
             for x in 0..reference_image.width() {
@@ -78,27 +49,63 @@ fn test_file(path : &Path) {
         }
     } else {
         print!("not paletted ");
+
+        let mut image_r = Vec::new();
+        let mut image_g = Vec::new();
+        let mut image_b = Vec::new();
+        for _ in 0..pcx.height() {
+            let mut r : Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
+            let mut g : Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
+            let mut b : Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
+            pcx.next_row_rgb(&mut r, &mut g, &mut b).unwrap();
+            image_r.push(r);
+            image_g.push(g);
+            image_b.push(b);
+        }
+
+        for y in 0..reference_image.height() {
+            for x in 0..reference_image.width() {
+                let pcx_r = image_r[y as usize][x as usize];
+                let pcx_g = image_g[y as usize][x as usize];
+                let pcx_b = image_b[y as usize][x as usize];
+
+                let reference_pixel = reference_image.get_pixel(x as u32, y as u32);
+                let reference_r = reference_pixel.data[0];
+                let reference_g = reference_pixel.data[1];
+                let reference_b = reference_pixel.data[2];
+
+                assert_eq!(pcx_r, reference_r);
+                assert_eq!(pcx_g, reference_g);
+                assert_eq!(pcx_b, reference_b);
+            }
+        }
     }
     println!("- Ok.");
 }
 
-#[test]
-fn samples() {
-   // test_file(&path::PathBuf::from("C:/projects/pcx/gmarbles.pcx"));
+fn test_files(path : &str) {
+    println!("Testing samples at {}", path);
+    for entry in WalkDir::new(path) {
+        let entry = entry.unwrap();
 
-    if let Some(samples_path) = option_env!("PCX_SAMPLES") {
-        println!("Testing samples at {}", env!("PCX_SAMPLES"));
-        for entry in WalkDir::new(samples_path) {
-            let entry = entry.unwrap();
-
-            if let Some(ext) = entry.path().extension() {
-                let ext = ext.to_str().unwrap();
-                if ext == "pcx" || ext == "PCX" {
-                    test_file(entry.path())
-                }
+        if let Some(ext) = entry.path().extension() {
+            let ext = ext.to_str().unwrap();
+            if ext == "pcx" || ext == "PCX" {
+                test_file(entry.path())
             }
         }
+    }
+}
 
-      //  assert!(false);
+#[test]
+fn samples() {
+    let samples_path = env!("CARGO_MANIFEST_DIR").to_string() + "/test-data";
+    test_files(&samples_path);
+}
+
+#[test]
+fn samples_env() {
+    if let Some(samples_path) = option_env!("PCX_RS_SAMPLES") {
+        test_files(samples_path);
     }
 }

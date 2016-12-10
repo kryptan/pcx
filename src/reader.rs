@@ -45,7 +45,7 @@ impl<R: io::Read> Reader<R> {
         self.header.size.0
     }
 
-    /// The width of this image.
+    /// The height of this image.
     pub fn height(&self) -> u16 {
         self.header.size.1
     }

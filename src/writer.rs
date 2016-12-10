@@ -34,6 +34,8 @@ impl<W: io::Write> WriterRgb<W> {
     ///
     /// Length of each of `r`, `g` and `b` must be equal to the width of the image passed to `new`.
     /// This function must be called number of times equal to the height of the image.
+    ///
+    /// Order of rows is from top to bottom.
     pub fn write_row(&mut self, r : &[u8], g : &[u8], b : &[u8]) -> io::Result<()> {
         self.compressor.write(r)?;
         self.compressor.pad()?;
@@ -75,6 +77,8 @@ impl<W: io::Write> WriterPaletted<W> {
     ///
     /// Row length must be equal to the width of the image passed to `new`.
     /// This function must be called number of times equal to the height of the image.
+    ///
+    /// Order of rows is from top to bottom.
     pub fn write_row(&mut self, row : &[u8]) -> io::Result<()> {
         self.compressor.write(row)?;
         self.compressor.pad()
@@ -84,6 +88,10 @@ impl<W: io::Write> WriterPaletted<W> {
     ///
     /// Palette length must be 256*3 = 768 bytes. Format is R, G, B, R, G, B, ...
     pub fn write_palette(self, palette : &[u8]) -> io::Result<()> {
+        if palette.len() != 256*3 {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::WriterPaletted::write_palette: incorrect palette length"));
+        }
+
         let mut stream = self.compressor.finish()?;
         stream.write_u8(PALETTE_START)?;
         stream.write(palette)?;
