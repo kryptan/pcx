@@ -65,7 +65,7 @@ impl<S : io::Read> io::Read for Decompressor<S> {
 
 /// Compress using RLE.
 ///
-/// Warning: compressor does not implement `Drop` and will not automatically get flushed on destruction. Call `finish` or `flush` to flush it.
+/// Warning: compressor does not implement `Drop` and will not automatically get flushed on destruction. Call `finish()` or `flush()` to flush it.
 /// If it would implement `Drop` it would be impossible to implement `finish()` due to
 /// [restrictions](https://doc.rust-lang.org/error-index.html#E0509) of the Rust language.
 pub struct Compressor<S : io::Write> {
@@ -90,6 +90,7 @@ impl<S : io::Write> Compressor<S> {
         }
     }
 
+    /// Pad to the lane length.
     pub fn pad(&mut self) -> io::Result<()> {
         use std::io::Write;
 

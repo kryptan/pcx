@@ -42,6 +42,13 @@ impl<W: io::Write> WriterRgb<W> {
         self.compressor.write(b)?;
         self.compressor.pad()
     }
+
+    /// Flush all data and finish writing.
+    ///
+    /// If you simply drop `WriterRgb` it will also flush everything but this function is preferable because errors won't be ignored.
+    pub fn finish(mut self) -> io::Result<()> {
+        self.compressor.flush()
+    }
 }
 
 impl<W: io::Write> Drop for WriterRgb<W> {

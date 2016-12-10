@@ -32,10 +32,15 @@ typedef struct _PcxHeader
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Version {
+    /// Version 2.5 with fixed EGA palette information.
     V0 = 0,
+    /// Version 2.8 with modifiable EGA palette information.
     V2 = 2,
+    /// Version 2.8 without palette information.
     V3 = 3,
+    /// PC Paintbrush for Windows.
     V4 = 4,
+    /// Version 3.0 of PC Paintbrush, PC Paintbrush Plus, PC Paintbrush Plus for Windows, Publisher's Paintbrush, and all 24-bit image files.
     V5 = 5,
 }
 
@@ -139,7 +144,7 @@ impl Header {
             _ => return error("PCX: invalid or unsupported color format"),
         }
 
-        if lane_length < lane_proper_length(x_end - x_start, bit_depth) {
+        if lane_length < lane_proper_length(x_end + 1 - x_start, bit_depth) {
             return error("PCX: invalid lane length");
         }
 
@@ -180,6 +185,10 @@ pub fn write<W: io::Write>(stream : &mut W, paletted : bool, size : (u16, u16), 
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with width equal to 0xFFFF"))
     }
 
+    if size.0 == 0 || size.1 == 0 {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with zero size"))
+    }
+
     // Write header.
     stream.write_u8(MAGIC_BYTE)?;
     stream.write_u8(Version::V5 as u8)?;
@@ -187,8 +196,8 @@ pub fn write<W: io::Write>(stream : &mut W, paletted : bool, size : (u16, u16), 
     stream.write_u8(8)?; // bit depth
     stream.write_u16::<LittleEndian>(0)?; // x_start
     stream.write_u16::<LittleEndian>(0)?; // y_start
-    stream.write_u16::<LittleEndian>(size.0)?;
-    stream.write_u16::<LittleEndian>(size.1)?;
+    stream.write_u16::<LittleEndian>(size.0 - 1)?;
+    stream.write_u16::<LittleEndian>(size.1 - 1)?;
     stream.write_u16::<LittleEndian>(dpi.0)?;
     stream.write_u16::<LittleEndian>(dpi.1)?;
 
