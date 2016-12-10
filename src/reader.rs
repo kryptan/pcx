@@ -113,21 +113,19 @@ impl<R: io::Read> Reader<R> {
         self.next_lane(b)
     }
 
-    // Read next lane. Format is dependent on file format. Buffer length must be equal to `Header::lane_proper_length()`, otherwise this method will panic.
+    // Read next lane. Format is dependent on file format. Buffer length must be equal to `Header::lane_proper_length()`.
     //
     // Order of lanes is from top to bottom.
     fn next_lane(&mut self, buffer: &mut [u8]) -> io::Result<()> {
         use std::io::Read;
 
         if buffer.len() != self.header.lane_proper_length() as usize {
-            panic!("pcx::Reader::next_lane: incorrect buffer size.");
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_lane: incorrect buffer size."));
         }
 
         self.decompressor.read(buffer)?;
 
         // Skip padding.
-        let lap = self.header.lane_padding();
-        println!("lap {:?}", lap);
         for _ in 0..self.header.lane_padding() {
             self.decompressor.read_u8()?;
         }
@@ -199,8 +197,6 @@ mod tests {
         let data = include_bytes!("../test-data/gmarbles.pcx");
         let read = &mut &data[..];
         let mut reader = Reader::new(read).unwrap();
-
-        println!("{:?}", reader.header);
 
         assert_eq!(reader.header.version, header::Version::V5);
         assert_eq!(reader.header.is_compressed, true);

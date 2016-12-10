@@ -96,12 +96,12 @@ impl Header {
             3 => Version::V3,
             4 => Version::V4,
             5 => Version::V5,
-            _ => return error("unknown PCX version"),
+            _ => return error("PCX: unknown version"),
         };
 
         let encoding = stream.read_u8()?;
         if encoding != 0 && encoding != 1 {
-            return error("unknown PCX encoding");
+            return error("PCX: unknown encoding");
         }
 
         let bit_depth = stream.read_u8()?;
@@ -114,6 +114,8 @@ impl Header {
         if x_end < x_start || y_end < y_start {
             return error("PCX: invalid dimensions");
         }
+
+        let (width, height) = (x_end - x_start + 1, y_end - y_start + 1);
 
         let x_dpi = stream.read_u16::<LittleEndian>()?;
         let y_dpi = stream.read_u16::<LittleEndian>()?;
@@ -144,7 +146,7 @@ impl Header {
             _ => return error("PCX: invalid or unsupported color format"),
         }
 
-        if lane_length < lane_proper_length(x_end + 1 - x_start, bit_depth) {
+        if lane_length < lane_proper_length(width, bit_depth) {
             return error("PCX: invalid lane length");
         }
 
@@ -152,7 +154,7 @@ impl Header {
             version : version,
             is_compressed : encoding == 1,
             bit_depth : bit_depth,
-            size : (x_end + 1 - x_start, y_end + 1 - y_start),
+            size : (width, height),
             start : (x_start, y_start),
             dpi : (x_dpi, y_dpi),
             palette : palette,
