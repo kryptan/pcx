@@ -13,3 +13,7 @@ exclude = ["pcx.iml"]
 
 [dependencies]
 byteorder = "0.5"
+
+[dev-dependencies]
+walkdir = "1.0.3"
+image = { version = "0.10.4", features = ["png_codec"], default-features = false }

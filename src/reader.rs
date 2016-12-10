@@ -36,8 +36,18 @@ impl<R: io::Read> Reader<R> {
     }
 
     /// Get width and height of the image.
-    pub fn size(&self) -> (u16, u16) {
+    pub fn dimensions(&self) -> (u16, u16) {
         self.header.size
+    }
+
+    /// The width of this image.
+    pub fn width(&self) -> u16 {
+        self.header.size.0
+    }
+
+    /// The width of this image.
+    pub fn height(&self) -> u16 {
+        self.header.size.1
     }
 
     /// Whether this image is paletted or 24-bit RGB.
@@ -74,7 +84,7 @@ impl<R: io::Read> Reader<R> {
                 ($bits:expr) => {
                     for i in 0..lane_length {
                         for j in 0..(8/$bits) {
-                            buffer[i*(8/$bits) + j] = (buffer[offset + i] & (((1 << $bits) - 1) << (8 - $bits - j))) >> (8 - $bits - j);
+                            buffer[i*(8/$bits) + j] = (buffer[offset + i] & (((1 << $bits) - 1) << (8 - $bits*(j + 1)))) >> (8 - $bits*(j + 1));
                         }
                     }
                 }
@@ -85,10 +95,36 @@ impl<R: io::Read> Reader<R> {
                 1 => unpack_bits!(1),
                 2 => unpack_bits!(2),
                 4 => unpack_bits!(4),
-                _ => unreachable!(),
+                _ => unreachable!(), // bit depth was checked while reading header
             }
         } else { // Planar, 4, 8 or 16 colors.
+            let lane_length = self.header.lane_proper_length() as usize;
+            let number_of_color_planes = self.header.number_of_color_planes as usize;
+            let half_len = buffer.len()/2;
 
+            // Place packed rows at the first half of the buffer, this will allow us easily to unpack them.
+            for i in 0..number_of_color_planes {
+                self.next_lane(&mut buffer[(lane_length*i)..(lane_length*(i + 1))])?;
+            }
+
+            for x in 0..self.width() {
+                let m = 0x80 >> (x & 7);
+                let mut v = 0;
+                for i in (0..number_of_color_planes).rev() {
+                    v <<= 1;
+                    v  += if buffer[i*lane_length + (x as usize >> 3)] & m != 0 { 1 } else { 0 };
+                }
+                if x % 2 == 0 {
+                    buffer[half_len + (x/2) as usize] = v << 4;
+                } else {
+                    buffer[half_len + (x/2) as usize] |= v;
+                }
+            }
+
+            for i in 0..half_len {
+                buffer[i*2] = (buffer[half_len + i] & 0xF0) >> 4;
+                buffer[i*2 + 1] = buffer[half_len + i] & 0xF;
+            }
         }
 
         Ok(())
@@ -123,11 +159,13 @@ impl<R: io::Read> Reader<R> {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_lane: incorrect buffer size."));
         }
 
-        self.decompressor.read(buffer)?;
+        self.decompressor.read_exact(buffer)?;
 
-        // Skip padding.
-        for _ in 0..self.header.lane_padding() {
-            self.decompressor.read_u8()?;
+        if self.num_lanes_read + 1 < (self.height() as u32)*(self.header.number_of_color_planes as u32) {
+            // Skip padding.
+            for _ in 0..self.header.lane_padding() {
+                self.decompressor.read_u8()?;
+            }
         }
 
         self.num_lanes_read += 1;
@@ -143,6 +181,21 @@ impl<R: io::Read> Reader<R> {
     /// equal to the returned value multiplied by 3. Format of the output buffer is R, G, B, R, G, B, ...
     pub fn read_palette(self, buffer: &mut [u8]) -> io::Result<usize> {
         match self.header.palette_length() {
+            Some(2) => {
+                // Special case - monochrome image.
+
+                // Black.
+                buffer[0] = 0;
+                buffer[1] = 0;
+                buffer[2] = 0;
+
+                // White.
+                buffer[3] = 255;
+                buffer[4] = 255;
+                buffer[5] = 255;
+
+                return Ok(2 as usize);
+            },
             Some(palette_length @ 1 ... 16) => {
                 // Palettes of 16 colors or smaller are stored in the header.
                 for i in 0..(palette_length as usize) {
@@ -167,7 +220,7 @@ impl<R: io::Read> Reader<R> {
         let mut pos = 0;
 
         loop {
-            let read = stream.read(&mut temp_buffer[pos..(TEMP_BUFFER_LENGTH - pos)])?;
+            let read = stream.read(&mut temp_buffer[pos..TEMP_BUFFER_LENGTH])?;
             if read != 0 {
                 pos = (pos + read) % TEMP_BUFFER_LENGTH;
             } else {
@@ -210,8 +263,8 @@ mod tests {
         assert!(reader.is_paletted());
         assert_eq!(reader.palette_length(), Some(256));
 
-        let mut row : Vec<u8> = iter::repeat(0).take(reader.size().0 as usize).collect();
-        for _ in 0..reader.size().1 {
+        let mut row : Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        for _ in 0..reader.height() {
             reader.next_row_paletted(&mut row[..]).unwrap();
         }
 
@@ -236,10 +289,10 @@ mod tests {
 
         assert_eq!(reader.is_paletted(), false);
 
-        let mut r : Vec<u8> = iter::repeat(0).take(reader.size().0 as usize).collect();
-        let mut g : Vec<u8> = iter::repeat(0).take(reader.size().0 as usize).collect();
-        let mut b : Vec<u8> = iter::repeat(0).take(reader.size().0 as usize).collect();
-        for _ in 0..reader.size().1 {
+        let mut r : Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        let mut g : Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        let mut b : Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        for _ in 0..reader.height() {
             reader.next_row_rgb(&mut r[..], &mut g[..], &mut b[..]).unwrap();
         }
 

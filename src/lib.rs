@@ -10,6 +10,8 @@
 // http://www.fileformat.info/format/pcx/spec/index.htm
 
 extern crate byteorder;
+#[cfg(test)] extern crate walkdir;
+#[cfg(test)] extern crate image;
 
 pub use reader::Reader;
 pub use writer::{WriterRgb, WriterPaletted};
@@ -17,6 +19,9 @@ pub use writer::{WriterRgb, WriterPaletted};
 pub mod low_level;
 mod reader;
 mod writer;
+
+#[cfg(test)]
+mod test_samples;
 
 #[cfg(test)]
 mod tests {
@@ -42,10 +47,8 @@ mod tests {
             writer.finish().unwrap();
         }
 
-        println!("{:?}", pcx);
-
         let mut reader = Reader::new(&pcx[..]).unwrap();
-        assert_eq!(reader.size(), (width, height));
+        assert_eq!(reader.dimensions(), (width, height));
         assert_eq!(reader.is_paletted(), false);
         assert_eq!(reader.palette_length(), None);
 
@@ -84,7 +87,7 @@ mod tests {
         }
 
         let mut reader = Reader::new(&pcx[..]).unwrap();
-        assert_eq!(reader.size(), (width, height));
+        assert_eq!(reader.dimensions(), (width, height));
         assert!(reader.is_paletted());
         assert_eq!(reader.palette_length(), Some(256));
 

@@ -176,7 +176,7 @@ impl Header {
     pub fn palette_length(&self) -> Option<u16> {
         match (self.number_of_color_planes, self.bit_depth) {
             (3, 8) => None,
-            (number_of_color_planes, bit_depth) => Some((1 << bit_depth as u16)*(number_of_color_planes as u16)),
+            (number_of_color_planes, bit_depth) => Some(1 << ((bit_depth as u16)*(number_of_color_planes as u16))),
         }
     }
 }
