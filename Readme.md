@@ -7,3 +7,5 @@ Add it to you dependencies:
     pcx = "0.1"
 
 See [API documentation](https://docs.rs/pcx/0.1.1/pcx/) for more info.
+
+Released under [WTFPL license](http://www.wtfpl.net/).
