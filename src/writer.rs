@@ -75,7 +75,7 @@ impl<W: io::Write> WriterRgb<W> {
             return user_error("pcx::WriterRgb::write_row_from_interleaved: all rows were already written");
         }
 
-        if rgb.len() != (self.width as usize)*3 {
+        if rgb.len() != (self.width as usize) * 3 {
             return user_error("pcx::WriterRgb::write_row_from_interleaved: buffer length must be equal to the width of the image multiplied by 3");
         }
 
@@ -117,7 +117,7 @@ impl<W: io::Write> WriterPaletted<W> {
 
         let lane_length = image_size.0 + (image_size.0 & 1); // width rounded up to even
 
-        Ok(WriterPaletted  {
+        Ok(WriterPaletted {
             compressor: Compressor::new(stream, lane_length),
             width: image_size.0,
             num_rows_left: image_size.1,

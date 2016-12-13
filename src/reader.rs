@@ -192,7 +192,7 @@ impl<R: io::Read> Reader<R> {
         /// API for reading lanes is not exposed so users have no way of messing that up.
         assert_eq!(self.num_lanes_read % 3, 0);
 
-        if rgb.len() != (self.width() as usize)*3 {
+        if rgb.len() != (self.width() as usize) * 3 {
             return user_error("pcx::Reader::next_row_rgb_interleaved: buffer length must be equal to the width of the image multiplied by 3");
         }
 
