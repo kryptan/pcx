@@ -6,12 +6,26 @@ use byteorder::ReadBytesExt;
 use low_level::{Header, PALETTE_START};
 use low_level::rle::Decompressor;
 
+enum PixelReader<R: io::Read> {
+    Compressed(Decompressor<R>),
+    NotCompressed(R),
+}
+
+impl<R: io::Read> io::Read for PixelReader<R> {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        match self {
+            &mut PixelReader::Compressed(ref mut decompressor) => decompressor.read(buffer),
+            &mut PixelReader::NotCompressed(ref mut stream) => stream.read(buffer),
+        }
+    }
+}
+
 /// PCX file reader.
 pub struct Reader<R: io::Read> {
     /// File header. All useful values are available via `Reader` methods so you don't actually need it.
     pub header : Header,
 
-    decompressor : Decompressor<R>,
+    pixel_reader : PixelReader<R>,
     num_lanes_read : u32,
 }
 
@@ -27,35 +41,45 @@ impl<R: io::Read> Reader<R> {
     /// Start reading PCX file.
     pub fn new(mut stream: R) -> io::Result<Self> {
         let header = Header::load(&mut stream)?;
+        let pixel_reader = if header.is_compressed {
+            PixelReader::Compressed(Decompressor::new(stream))
+        } else {
+            PixelReader::NotCompressed(stream)
+        };
 
         Ok(Reader {
             header : header,
-            decompressor : Decompressor::new(stream),
+            pixel_reader : pixel_reader,
             num_lanes_read : 0,
         })
     }
 
     /// Get width and height of the image.
+    #[inline]
     pub fn dimensions(&self) -> (u16, u16) {
         self.header.size
     }
 
     /// The width of this image.
+    #[inline]
     pub fn width(&self) -> u16 {
         self.header.size.0
     }
 
     /// The height of this image.
+    #[inline]
     pub fn height(&self) -> u16 {
         self.header.size.1
     }
 
     /// Whether this image is paletted or 24-bit RGB.
+    #[inline]
     pub fn is_paletted(&self) -> bool {
         self.header.palette_length().is_some()
     }
 
     /// Get number of colors in the palette if this image is paletted. Number of colors is either 2, 4, 8, 16 or 256.
+    #[inline]
     pub fn palette_length(&self) -> Option<u16> {
         self.header.palette_length()
     }
@@ -159,12 +183,12 @@ impl<R: io::Read> Reader<R> {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_lane: incorrect buffer size."));
         }
 
-        self.decompressor.read_exact(buffer)?;
+        self.pixel_reader.read_exact(buffer)?;
 
         if self.num_lanes_read + 1 < (self.height() as u32)*(self.header.number_of_color_planes as u32) {
             // Skip padding.
             for _ in 0..self.header.lane_padding() {
-                self.decompressor.read_u8()?;
+                self.pixel_reader.read_u8()?;
             }
         }
 
@@ -210,7 +234,10 @@ impl<R: io::Read> Reader<R> {
         }
 
         // Stop decompressing and continue reading underlying stream.
-        let mut stream = self.decompressor.finish();
+        let mut stream = match self.pixel_reader {
+            PixelReader::Compressed(decompressor) => decompressor.finish(),
+            PixelReader::NotCompressed(stream) => stream,
+        };
 
         // 256-color palette is located at the end of file. To avoid seeking we are using a bit convoluted method here to read it.
         const PALETTE_LENGTH: usize = 256*3;
