@@ -148,7 +148,7 @@ impl<W: io::Write> WriterPaletted<W> {
 
     /// Since palette is written to the end of PCX file this function must be called only after writing all the pixels.
     ///
-    /// Palette length must be not larger then 256*3 = 768 bytes and be divisible by 3. Format is R, G, B, R, G, B, ...
+    /// Palette length must be not larger than 256*3 = 768 bytes and be divisible by 3. Format is R, G, B, R, G, B, ...
     pub fn write_palette(self, palette: &[u8]) -> io::Result<()> {
         if self.num_rows_left != 0 {
             return user_error("pcx::WriterPaletted::write_palette: not all rows written");
