@@ -3,6 +3,7 @@ use std::path::Path;
 use std::fs::File;
 use byteorder::ReadBytesExt;
 
+use user_error;
 use low_level::{Header, PALETTE_START};
 use low_level::rle::Decompressor;
 
@@ -88,10 +89,10 @@ impl<R: io::Read> Reader<R> {
     ///
     /// `buffer` length must be equal to the image width.
     ///
-    /// Order of rows is from top to bottom.
+    /// Order of rows is from top to bottom, order of pixels is from left to right.
     pub fn next_row_paletted(&mut self, buffer: &mut [u8]) -> io::Result<()> {
         if !self.is_paletted() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_row_paletted called on non-paletted image"));
+            return user_error("pcx::Reader::next_row_paletted called on non-paletted image");
         }
 
         if self.palette_length() == Some(256) {
@@ -164,14 +165,14 @@ impl<R: io::Read> Reader<R> {
     ///
     /// `r`, `g`, `b` buffer lengths must be equal to the image width.
     ///
-    /// Order of rows is from top to bottom.
+    /// Order of rows is from top to bottom, order of pixels is from left to right.
     pub fn next_row_rgb(&mut self, r: &mut [u8], g: &mut [u8], b: &mut [u8]) -> io::Result<()> {
         if self.is_paletted() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_row_rgb called on paletted image"));
+            return user_error("pcx::Reader::next_row_rgb called on paletted image");
         }
 
         if self.num_lanes_read % 3 != 0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_row_rgb, invalid use of next_lane"));
+            return user_error("pcx::Reader::next_row_rgb, invalid use of next_lane");
         }
 
         self.next_lane(r)?;
@@ -186,7 +187,7 @@ impl<R: io::Read> Reader<R> {
         use std::io::Read;
 
         if buffer.len() != self.header.lane_proper_length() as usize {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_lane: incorrect buffer size."));
+            return user_error("pcx::Reader::next_lane: incorrect buffer size.");
         }
 
         self.pixel_reader.read_exact(buffer)?;

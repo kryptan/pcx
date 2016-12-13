@@ -15,6 +15,8 @@ extern crate walkdir;
 #[cfg(test)]
 extern crate image;
 
+use std::io;
+
 pub use reader::Reader;
 pub use writer::{WriterRgb, WriterPaletted};
 
@@ -24,6 +26,11 @@ mod writer;
 
 #[cfg(test)]
 mod test_samples;
+
+// Error caused by incorrect use of the API.
+fn user_error<T>(error: &str) -> io::Result<T> {
+    Err(io::Error::new(io::ErrorKind::InvalidInput, error))
+}
 
 #[cfg(test)]
 mod tests {
@@ -44,7 +51,7 @@ mod tests {
                     b[x as usize] = (y & 0xFF) as u8;
                 }
 
-                writer.write_row(&r, &g, &b).unwrap();
+                writer.write_row_from_separate(&r, &g, &b).unwrap();
             }
             writer.finish().unwrap();
         }
