@@ -86,15 +86,18 @@ impl<W: io::Write> WriterPaletted<W> {
 
     /// Since palette is written to the end of PCX file this function must be called only after writing all the pixels.
     ///
-    /// Palette length must be 256*3 = 768 bytes. Format is R, G, B, R, G, B, ...
+    /// Palette length must be not larger then 256*3 = 768 bytes and be divisible by 3. Format is R, G, B, R, G, B, ...
     pub fn write_palette(self, palette : &[u8]) -> io::Result<()> {
-        if palette.len() != 256*3 {
+        if palette.len() > 256*3 || palette.len() % 3 != 0 {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::WriterPaletted::write_palette: incorrect palette length"));
         }
 
         let mut stream = self.compressor.finish()?;
         stream.write_u8(PALETTE_START)?;
         stream.write(palette)?;
+        for _ in 0..(256*3 - palette.len()) {
+            stream.write_u8(0)?;
+        }
 
         Ok(())
     }
