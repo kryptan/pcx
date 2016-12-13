@@ -48,43 +48,43 @@ pub enum Version {
 #[derive(Copy, Clone, Debug)]
 pub struct Header {
     /// Version of the file format.
-    pub version : Version,
+    pub version: Version,
 
     /// Whether data in the file is RLE-compressed or not. Non-compressed files are non-standard but are supported by this library.
-    pub is_compressed : bool,
+    pub is_compressed: bool,
 
     /// Bits per pixel per color. Either 1, 2, 4 or 8.
-    pub bit_depth : u8,
+    pub bit_depth: u8,
 
     /// Width and height of the image.
-    pub size : (u16, u16),
+    pub size: (u16, u16),
 
     /// Offset indicating where to render this image. This is usually set to `(0, 0)` and can be ignored.
-    pub start : (u16, u16),
+    pub start: (u16, u16),
 
     /// Dots per inch.
-    pub dpi : (u16, u16),
+    pub dpi: (u16, u16),
 
     /// Color palette.
-    pub palette : [[u8; 3]; 16],
+    pub palette: [[u8; 3]; 16],
 
     /// Number of color channels in the image.
-    pub number_of_color_planes : u8,
+    pub number_of_color_planes: u8,
 
     /// Lane length including padding bytes.
-    pub lane_length : u16,
+    pub lane_length: u16,
 }
 
-fn error<T>(msg : &str) -> io::Result<T> {
+fn error<T>(msg: &str) -> io::Result<T> {
     Err(io::Error::new(io::ErrorKind::InvalidData, msg))
 }
 
-fn lane_proper_length(width : u16, bit_depth : u8) -> u16 {
-    (((width as u32)*(bit_depth as u32) - 1)/8 + 1) as u16
+fn lane_proper_length(width: u16, bit_depth: u8) -> u16 {
+    (((width as u32) * (bit_depth as u32) - 1) / 8 + 1) as u16
 }
 
 impl Header {
-    pub fn load<R : io::Read>(stream : &mut R) -> io::Result<Self> {
+    pub fn load<R: io::Read>(stream: &mut R) -> io::Result<Self> {
         let magic = stream.read_u8()?;
         if magic != MAGIC_BYTE {
             return error("not a PCX file");
@@ -150,16 +150,16 @@ impl Header {
             return error("PCX: invalid lane length");
         }
 
-        Ok(Header{
-            version : version,
-            is_compressed : encoding == 1,
-            bit_depth : bit_depth,
-            size : (width, height),
-            start : (x_start, y_start),
-            dpi : (x_dpi, y_dpi),
-            palette : palette,
-            number_of_color_planes : number_of_color_planes,
-            lane_length : lane_length,
+        Ok(Header {
+            version: version,
+            is_compressed: encoding == 1,
+            bit_depth: bit_depth,
+            size: (width, height),
+            start: (x_start, y_start),
+            dpi: (x_dpi, y_dpi),
+            palette: palette,
+            number_of_color_planes: number_of_color_planes,
+            lane_length: lane_length,
         })
     }
 
@@ -176,19 +176,20 @@ impl Header {
     pub fn palette_length(&self) -> Option<u16> {
         match (self.number_of_color_planes, self.bit_depth) {
             (3, 8) => None,
-            (number_of_color_planes, bit_depth) => Some(1 << ((bit_depth as u16)*(number_of_color_planes as u16))),
+            (number_of_color_planes, bit_depth) => Some(1 << ((bit_depth as u16) * (number_of_color_planes as u16))),
         }
     }
 }
 
 /// Write header to the stream.
-pub fn write<W: io::Write>(stream : &mut W, paletted : bool, size : (u16, u16), dpi : (u16, u16)) -> io::Result<()> {
-    if size.0 == 0xFFFF { // we'll need to round width up to even number which is not possible for 0xFFFF due to overflow
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with width equal to 0xFFFF"))
+pub fn write<W: io::Write>(stream: &mut W, paletted: bool, size: (u16, u16), dpi: (u16, u16)) -> io::Result<()> {
+    if size.0 == 0xFFFF {
+        // we'll need to round width up to even number which is not possible for 0xFFFF due to overflow
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with width equal to 0xFFFF"));
     }
 
     if size.0 == 0 || size.1 == 0 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with zero size"))
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with zero size"));
     }
 
     // Write header.

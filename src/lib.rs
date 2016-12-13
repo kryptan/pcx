@@ -10,8 +10,10 @@
 // http://www.fileformat.info/format/pcx/spec/index.htm
 
 extern crate byteorder;
-#[cfg(test)] extern crate walkdir;
-#[cfg(test)] extern crate image;
+#[cfg(test)]
+extern crate walkdir;
+#[cfg(test)]
+extern crate image;
 
 pub use reader::Reader;
 pub use writer::{WriterRgb, WriterPaletted};
@@ -28,7 +30,7 @@ mod tests {
     use std::iter;
     use {Reader, WriterRgb, WriterPaletted};
 
-    fn round_trip_rgb(width : u16, height : u16) {
+    fn round_trip_rgb(width: u16, height: u16) {
         let mut pcx = Vec::new();
 
         {
@@ -67,10 +69,10 @@ mod tests {
         }
     }
 
-    fn round_trip_paletted(width : u16, height : u16) {
+    fn round_trip_paletted(width: u16, height: u16) {
         let mut pcx = Vec::new();
 
-        let palette : Vec<u8> = (0..256*3).map(|v| (v % 0xFF) as u8).collect();
+        let palette: Vec<u8> = (0..256 * 3).map(|v| (v % 0xFF) as u8).collect();
         {
             let mut writer = WriterPaletted::new(&mut pcx, (width, height), (300, 300)).unwrap();
 
@@ -101,7 +103,7 @@ mod tests {
             }
         }
 
-        let mut palette_read = [0; 3*256];
+        let mut palette_read = [0; 3 * 256];
         reader.read_palette(&mut palette_read).unwrap();
         assert_eq!(&palette[..], &palette_read[..]);
     }

@@ -4,20 +4,20 @@ use std::io;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
 /// Decompress RLE.
-pub struct Decompressor<S : io::Read> {
-    stream : S,
+pub struct Decompressor<S: io::Read> {
+    stream: S,
 
-    run_count : u8,
-    run_value : u8,
+    run_count: u8,
+    run_value: u8,
 }
 
-impl<S : io::Read> Decompressor<S> {
+impl<S: io::Read> Decompressor<S> {
     /// Create new decompressor from the stream.
-    pub fn new(stream : S) -> Self {
+    pub fn new(stream: S) -> Self {
         Decompressor {
-            stream : stream,
-            run_count : 0,
-            run_value : 0,
+            stream: stream,
+            run_count: 0,
+            run_value: 0,
         }
     }
 
@@ -27,7 +27,7 @@ impl<S : io::Read> Decompressor<S> {
     }
 }
 
-impl<S : io::Read> io::Read for Decompressor<S> {
+impl<S: io::Read> io::Read for Decompressor<S> {
     fn read(&mut self, mut buffer: &mut [u8]) -> io::Result<usize> {
         let mut read = 0;
         while buffer.len() > 0 {
@@ -36,7 +36,7 @@ impl<S : io::Read> io::Read for Decompressor<S> {
                 buffer.write_u8(self.run_value)?;
                 self.run_count -= 1;
                 read += 1;
-            };
+            }
 
             if buffer.len() == 0 {
                 return Ok(read);
@@ -50,10 +50,12 @@ impl<S : io::Read> io::Read for Decompressor<S> {
                 byte_buffer[0]
             };
 
-            if (byte & 0xC0) != 0xC0 { // 1-byte code
+            if (byte & 0xC0) != 0xC0 {
+                // 1-byte code
                 buffer.write_u8(byte)?;
                 read += 1;
-            } else { // 2-byte code
+            } else {
+                // 2-byte code
                 self.run_count = byte & 0x3F;
                 self.run_value = self.stream.read_u8()?;
             }
@@ -68,25 +70,25 @@ impl<S : io::Read> io::Read for Decompressor<S> {
 /// Warning: compressor does not implement `Drop` and will not automatically get flushed on destruction. Call `finish()` or `flush()` to flush it.
 /// If it would implement `Drop` it would be impossible to implement `finish()` due to
 /// [restrictions](https://doc.rust-lang.org/error-index.html#E0509) of the Rust language.
-pub struct Compressor<S : io::Write> {
-    stream : S,
+pub struct Compressor<S: io::Write> {
+    stream: S,
 
-    lane_length : u16,
-    lane_position : u16,
+    lane_length: u16,
+    lane_position: u16,
 
-    run_count : u8,
-    run_value : u8,
+    run_count: u8,
+    run_value: u8,
 }
 
-impl<S : io::Write> Compressor<S> {
+impl<S: io::Write> Compressor<S> {
     /// Create new compressor which will write to the stream.
-    pub fn new(stream : S, lane_length : u16) -> Self {
+    pub fn new(stream: S, lane_length: u16) -> Self {
         Compressor {
-            stream : stream,
-            run_count : 0,
-            run_value : 0,
-            lane_length : lane_length,
-            lane_position : 0,
+            stream: stream,
+            run_count: 0,
+            run_value: 0,
+            lane_length: lane_length,
+            lane_position: 0,
         }
     }
 
@@ -109,10 +111,10 @@ impl<S : io::Write> Compressor<S> {
 
     fn flush_compressor(&mut self) -> io::Result<()> {
         match (self.run_count, self.run_value) {
-            (0, _) => {},
-            (1, run_value @ 0 ... 0xBF) => {
+            (0, _) => {}
+            (1, run_value @ 0...0xBF) => {
                 self.stream.write_u8(run_value)?;
-            },
+            }
             (run_count, run_value) => {
                 self.stream.write_u8(0xC0 | run_count)?;
                 self.stream.write_u8(run_value)?;
@@ -123,7 +125,7 @@ impl<S : io::Write> Compressor<S> {
     }
 }
 
-impl<S : io::Write> io::Write for Compressor<S> {
+impl<S: io::Write> io::Write for Compressor<S> {
     fn write(&mut self, mut buffer: &[u8]) -> io::Result<usize> {
         use std::io::Read;
 
@@ -146,7 +148,7 @@ impl<S : io::Write> io::Write for Compressor<S> {
                 continue;
             }
 
-            if self.lane_position ==  self.lane_length {
+            if self.lane_position == self.lane_length {
                 self.lane_position = 0;
             }
 
@@ -170,7 +172,7 @@ mod tests {
     use byteorder::{ReadBytesExt, WriteBytesExt};
     use super::{Compressor, Decompressor};
 
-    fn round_trip(data : &[u8]) {
+    fn round_trip(data: &[u8]) {
         use std::io::{Read, Write};
 
         let mut compressed = Vec::new();
@@ -188,8 +190,8 @@ mod tests {
         assert_eq!(result, data);
     }
 
-    fn round_trip_one_by_one(data : &[u8]) {
-        use std::io::{Write};
+    fn round_trip_one_by_one(data: &[u8]) {
+        use std::io::Write;
 
         let mut compressed = Vec::new();
 
@@ -219,21 +221,16 @@ mod tests {
 
     #[test]
     fn round_trip_2() {
-        let data = [
-            0, 1, 2, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-            7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-        ];
+        let data = [0, 1, 2, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7];
 
         round_trip(&data);
         round_trip_one_by_one(&data);

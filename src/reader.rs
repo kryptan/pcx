@@ -23,10 +23,10 @@ impl<R: io::Read> io::Read for PixelReader<R> {
 /// PCX file reader.
 pub struct Reader<R: io::Read> {
     /// File header. All useful values are available via `Reader` methods so you don't actually need it.
-    pub header : Header,
+    pub header: Header,
 
-    pixel_reader : PixelReader<R>,
-    num_lanes_read : u32,
+    pixel_reader: PixelReader<R>,
+    num_lanes_read: u32,
 }
 
 impl Reader<io::BufReader<File>> {
@@ -48,9 +48,9 @@ impl<R: io::Read> Reader<R> {
         };
 
         Ok(Reader {
-            header : header,
-            pixel_reader : pixel_reader,
-            num_lanes_read : 0,
+            header: header,
+            pixel_reader: pixel_reader,
+            num_lanes_read: 0,
         })
     }
 
@@ -91,12 +91,13 @@ impl<R: io::Read> Reader<R> {
     /// Order of rows is from top to bottom.
     pub fn next_row_paletted(&mut self, buffer: &mut [u8]) -> io::Result<()> {
         if !self.is_paletted() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_row_paletted called on non-paletted image"))
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_row_paletted called on non-paletted image"));
         }
 
         if self.palette_length() == Some(256) {
             self.next_lane(buffer)?;
-        } else if self.header.number_of_color_planes == 1 { // All packed formats, max. 16 colors.
+        } else if self.header.number_of_color_planes == 1 {
+            // All packed formats, max. 16 colors.
             let lane_length = self.header.lane_proper_length() as usize;
             let buffer_len = buffer.len();
             let offset = buffer.len() - lane_length;
@@ -121,14 +122,15 @@ impl<R: io::Read> Reader<R> {
                 4 => unpack_bits!(4),
                 _ => unreachable!(), // bit depth was checked while reading header
             }
-        } else { // Planar, 4, 8 or 16 colors.
+        } else {
+            // Planar, 4, 8 or 16 colors.
             let lane_length = self.header.lane_proper_length() as usize;
             let number_of_color_planes = self.header.number_of_color_planes as usize;
-            let half_len = buffer.len()/2;
+            let half_len = buffer.len() / 2;
 
             // Place packed rows at the first half of the buffer, this will allow us easily to unpack them.
             for i in 0..number_of_color_planes {
-                self.next_lane(&mut buffer[(lane_length*i)..(lane_length*(i + 1))])?;
+                self.next_lane(&mut buffer[(lane_length * i)..(lane_length * (i + 1))])?;
             }
 
             for x in 0..self.width() {
@@ -136,18 +138,22 @@ impl<R: io::Read> Reader<R> {
                 let mut v = 0;
                 for i in (0..number_of_color_planes).rev() {
                     v <<= 1;
-                    v  += if buffer[i*lane_length + (x as usize >> 3)] & m != 0 { 1 } else { 0 };
+                    v += if buffer[i * lane_length + (x as usize >> 3)] & m != 0 {
+                        1
+                    } else {
+                        0
+                    };
                 }
                 if x % 2 == 0 {
-                    buffer[half_len + (x/2) as usize] = v << 4;
+                    buffer[half_len + (x / 2) as usize] = v << 4;
                 } else {
-                    buffer[half_len + (x/2) as usize] |= v;
+                    buffer[half_len + (x / 2) as usize] |= v;
                 }
             }
 
             for i in 0..half_len {
-                buffer[i*2] = (buffer[half_len + i] & 0xF0) >> 4;
-                buffer[i*2 + 1] = buffer[half_len + i] & 0xF;
+                buffer[i * 2] = (buffer[half_len + i] & 0xF0) >> 4;
+                buffer[i * 2 + 1] = buffer[half_len + i] & 0xF;
             }
         }
 
@@ -164,7 +170,7 @@ impl<R: io::Read> Reader<R> {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_row_rgb called on paletted image"));
         }
 
-        if self.num_lanes_read % 3 != 0{
+        if self.num_lanes_read % 3 != 0 {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::Reader::next_row_rgb, invalid use of next_lane"));
         }
 
@@ -185,7 +191,7 @@ impl<R: io::Read> Reader<R> {
 
         self.pixel_reader.read_exact(buffer)?;
 
-        if self.num_lanes_read + 1 < (self.height() as u32)*(self.header.number_of_color_planes as u32) {
+        if self.num_lanes_read + 1 < (self.height() as u32) * (self.header.number_of_color_planes as u32) {
             // Skip padding.
             for _ in 0..self.header.lane_padding() {
                 self.pixel_reader.read_u8()?;
@@ -219,17 +225,17 @@ impl<R: io::Read> Reader<R> {
                 buffer[5] = 255;
 
                 return Ok(2 as usize);
-            },
-            Some(palette_length @ 1 ... 16) => {
+            }
+            Some(palette_length @ 1...16) => {
                 // Palettes of 16 colors or smaller are stored in the header.
                 for i in 0..(palette_length as usize) {
-                    (&mut buffer[(i*3)..((i + 1)*3)]).copy_from_slice(&self.header.palette[i]);
+                    (&mut buffer[(i * 3)..((i + 1) * 3)]).copy_from_slice(&self.header.palette[i]);
                 }
-                return Ok(palette_length as usize)
-            },
+                return Ok(palette_length as usize);
+            }
             Some(256) => {
                 // 256-color palette is located at the end of file, we will read it below.
-            },
+            }
             _ => return Ok(0),
         }
 
@@ -240,7 +246,7 @@ impl<R: io::Read> Reader<R> {
         };
 
         // 256-color palette is located at the end of file. To avoid seeking we are using a bit convoluted method here to read it.
-        const PALETTE_LENGTH: usize = 256*3;
+        const PALETTE_LENGTH: usize = 256 * 3;
         const TEMP_BUFFER_LENGTH: usize = PALETTE_LENGTH + 1;
 
         let mut temp_buffer = [0; TEMP_BUFFER_LENGTH];
@@ -269,7 +275,7 @@ impl<R: io::Read> Reader<R> {
 mod tests {
     use std::iter;
 
-    use super::{Reader};
+    use super::Reader;
     use low_level::header;
 
     #[test]
@@ -290,12 +296,12 @@ mod tests {
         assert!(reader.is_paletted());
         assert_eq!(reader.palette_length(), Some(256));
 
-        let mut row : Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        let mut row: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
         for _ in 0..reader.height() {
             reader.next_row_paletted(&mut row[..]).unwrap();
         }
 
-        let mut palette = [0; 256*3];
+        let mut palette = [0; 256 * 3];
         assert_eq!(reader.read_palette(&mut palette).unwrap(), 256);
     }
 
@@ -316,9 +322,9 @@ mod tests {
 
         assert_eq!(reader.is_paletted(), false);
 
-        let mut r : Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
-        let mut g : Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
-        let mut b : Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        let mut r: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        let mut g: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        let mut b: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
         for _ in 0..reader.height() {
             reader.next_row_rgb(&mut r[..], &mut g[..], &mut b[..]).unwrap();
         }

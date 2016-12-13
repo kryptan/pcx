@@ -8,26 +8,24 @@ use low_level::PALETTE_START;
 
 /// Create 24-bit RGB PCX image.
 pub struct WriterRgb<W: io::Write> {
-    compressor : Compressor<W>,
+    compressor: Compressor<W>,
 }
 
 /// Create paletted PCX image.
 pub struct WriterPaletted<W: io::Write> {
-    compressor : Compressor<W>,
+    compressor: Compressor<W>,
 }
 
 impl<W: io::Write> WriterRgb<W> {
     /// Create new PCX writer.
     ///
     /// If you are not sure what to pass to `dpi` value just use something like `(100, 100)` or `(300, 300)`.
-    pub fn new(mut stream : W, image_size : (u16, u16), dpi : (u16, u16)) -> io::Result<Self> {
+    pub fn new(mut stream: W, image_size: (u16, u16), dpi: (u16, u16)) -> io::Result<Self> {
         header::write(&mut stream, false, image_size, dpi)?;
 
         let lane_length = image_size.0 + (image_size.0 & 1); // width rounded up to even
 
-        Ok(WriterRgb {
-            compressor : Compressor::new(stream, lane_length),
-        })
+        Ok(WriterRgb { compressor: Compressor::new(stream, lane_length) })
     }
 
     /// Write next row of pixels.
@@ -36,7 +34,7 @@ impl<W: io::Write> WriterRgb<W> {
     /// This function must be called number of times equal to the height of the image.
     ///
     /// Order of rows is from top to bottom.
-    pub fn write_row(&mut self, r : &[u8], g : &[u8], b : &[u8]) -> io::Result<()> {
+    pub fn write_row(&mut self, r: &[u8], g: &[u8], b: &[u8]) -> io::Result<()> {
         self.compressor.write(r)?;
         self.compressor.pad()?;
         self.compressor.write(g)?;
@@ -63,14 +61,12 @@ impl<W: io::Write> WriterPaletted<W> {
     /// Create new PCX writer.
     ///
     /// If you are not sure what to pass to `dpi` value just use something like `(100, 100)` or `(300, 300)`.
-    pub fn new(mut stream : W, image_size : (u16, u16), dpi : (u16, u16)) -> io::Result<Self> {
+    pub fn new(mut stream: W, image_size: (u16, u16), dpi: (u16, u16)) -> io::Result<Self> {
         header::write(&mut stream, true, image_size, dpi)?;
 
         let lane_length = image_size.0 + (image_size.0 & 1); // width rounded up to even
 
-        Ok(WriterPaletted {
-            compressor : Compressor::new(stream, lane_length),
-        })
+        Ok(WriterPaletted { compressor: Compressor::new(stream, lane_length) })
     }
 
     /// Write next row of pixels.
@@ -79,7 +75,7 @@ impl<W: io::Write> WriterPaletted<W> {
     /// This function must be called number of times equal to the height of the image.
     ///
     /// Order of rows is from top to bottom.
-    pub fn write_row(&mut self, row : &[u8]) -> io::Result<()> {
+    pub fn write_row(&mut self, row: &[u8]) -> io::Result<()> {
         self.compressor.write(row)?;
         self.compressor.pad()
     }
@@ -87,15 +83,15 @@ impl<W: io::Write> WriterPaletted<W> {
     /// Since palette is written to the end of PCX file this function must be called only after writing all the pixels.
     ///
     /// Palette length must be not larger then 256*3 = 768 bytes and be divisible by 3. Format is R, G, B, R, G, B, ...
-    pub fn write_palette(self, palette : &[u8]) -> io::Result<()> {
-        if palette.len() > 256*3 || palette.len() % 3 != 0 {
+    pub fn write_palette(self, palette: &[u8]) -> io::Result<()> {
+        if palette.len() > 256 * 3 || palette.len() % 3 != 0 {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "pcx::WriterPaletted::write_palette: incorrect palette length"));
         }
 
         let mut stream = self.compressor.finish()?;
         stream.write_u8(PALETTE_START)?;
         stream.write(palette)?;
-        for _ in 0..(256*3 - palette.len()) {
+        for _ in 0..(256 * 3 - palette.len()) {
             stream.write_u8(0)?;
         }
 

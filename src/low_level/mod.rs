@@ -5,7 +5,7 @@ pub mod header;
 pub use self::header::Header;
 
 /// Magic byte which is used as first byte in all PCX files.
-pub const MAGIC_BYTE : u8 = 0xA;
+pub const MAGIC_BYTE: u8 = 0xA;
 
 /// Byte marking start of 256-color palette.
-pub const PALETTE_START : u8 = 0xC;
+pub const PALETTE_START: u8 = 0xC;
