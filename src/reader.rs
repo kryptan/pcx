@@ -161,23 +161,61 @@ impl<R: io::Read> Reader<R> {
         Ok(())
     }
 
-    /// Read next row of the RGB image. Check that `is_paletted()` is `false` before calling this function.
+    /// Read next row of the RGB image to separate R, G and B buffers. Check that `is_paletted()` is `false` before calling this function.
     ///
     /// `r`, `g`, `b` buffer lengths must be equal to the image width.
     ///
     /// Order of rows is from top to bottom, order of pixels is from left to right.
-    pub fn next_row_rgb(&mut self, r: &mut [u8], g: &mut [u8], b: &mut [u8]) -> io::Result<()> {
+    pub fn next_row_rgb_separate(&mut self, r: &mut [u8], g: &mut [u8], b: &mut [u8]) -> io::Result<()> {
         if self.is_paletted() {
-            return user_error("pcx::Reader::next_row_rgb called on paletted image");
+            return user_error("pcx::Reader::next_row_rgb_separate called on paletted image");
         }
 
-        if self.num_lanes_read % 3 != 0 {
-            return user_error("pcx::Reader::next_row_rgb, invalid use of next_lane");
-        }
+        /// API for reading lanes is not exposed so users have no way of messing that up.
+        assert_eq!(self.num_lanes_read % 3, 0);
 
         self.next_lane(r)?;
         self.next_lane(g)?;
         self.next_lane(b)
+    }
+
+    /// Read next row of the RGB image to one buffer with interleaved RGB values. Check that `is_paletted()` is `false` before calling this function.
+    ///
+    /// `rgb` buffer length must be equal to the image width multiplied by 3.
+    ///
+    /// Order of rows is from top to bottom, order of pixels is from left to right.
+    pub fn next_row_rgb_interleaved(&mut self, rgb: &mut [u8]) -> io::Result<()> {
+        if self.is_paletted() {
+            return user_error("pcx::Reader::next_row_rgb_interleaved called on paletted image");
+        }
+
+        /// API for reading lanes is not exposed so users have no way of messing that up.
+        assert_eq!(self.num_lanes_read % 3, 0);
+
+        if rgb.len() != (self.width() as usize)*3 {
+            return user_error("pcx::Reader::next_row_rgb_interleaved: buffer length must be equal to the width of the image multiplied by 3");
+        }
+
+        for color in 0..3 {
+            for x in 0..(self.width() as usize) {
+                rgb[x * 3 + color] = self.pixel_reader.read_u8()?;
+            }
+            self.skip_padding()?;
+        }
+
+        Ok(())
+    }
+
+    fn skip_padding(&mut self) -> io::Result<()> {
+        if self.num_lanes_read + 1 < (self.height() as u32) * (self.header.number_of_color_planes as u32) {
+            // Skip padding.
+            for _ in 0..self.header.lane_padding() {
+                self.pixel_reader.read_u8()?;
+            }
+        }
+
+        self.num_lanes_read += 1;
+        Ok(())
     }
 
     // Read next lane. Format is dependent on file format. Buffer length must be equal to `Header::lane_proper_length()`.
@@ -191,17 +229,7 @@ impl<R: io::Read> Reader<R> {
         }
 
         self.pixel_reader.read_exact(buffer)?;
-
-        if self.num_lanes_read + 1 < (self.height() as u32) * (self.header.number_of_color_planes as u32) {
-            // Skip padding.
-            for _ in 0..self.header.lane_padding() {
-                self.pixel_reader.read_u8()?;
-            }
-        }
-
-        self.num_lanes_read += 1;
-
-        Ok(())
+        self.skip_padding()
     }
 
     /// Read color palette.
@@ -327,7 +355,7 @@ mod tests {
         let mut g: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
         let mut b: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
         for _ in 0..reader.height() {
-            reader.next_row_rgb(&mut r[..], &mut g[..], &mut b[..]).unwrap();
+            reader.next_row_rgb_separate(&mut r[..], &mut g[..], &mut b[..]).unwrap();
         }
 
         let mut palette = [0; 0];

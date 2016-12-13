@@ -66,7 +66,7 @@ mod tests {
         let mut b: Vec<u8> = iter::repeat(0).take(width as usize).collect();
 
         for y in 0..height {
-            reader.next_row_rgb(&mut r, &mut g, &mut b).unwrap();
+            reader.next_row_rgb_separate(&mut r, &mut g, &mut b).unwrap();
 
             for x in 0..width {
                 assert_eq!(r[x as usize], 88);

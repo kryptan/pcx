@@ -76,10 +76,10 @@ impl<W: io::Write> WriterRgb<W> {
         }
 
         if rgb.len() != (self.width as usize)*3 {
-            return user_error("pcx::WriterRgb::write_row_from_interleaved: buffer length must be equal to the width of the image");
+            return user_error("pcx::WriterRgb::write_row_from_interleaved: buffer length must be equal to the width of the image multiplied by 3");
         }
 
-        for color in 0..2 {
+        for color in 0..3 {
             for x in 0..(self.width as usize) {
                 self.compressor.write_u8(rgb[x * 3 + color])?;
             }

@@ -57,7 +57,7 @@ fn test_file(path: &Path) {
             let mut r: Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
             let mut g: Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
             let mut b: Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
-            pcx.next_row_rgb(&mut r, &mut g, &mut b).unwrap();
+            pcx.next_row_rgb_separate(&mut r, &mut g, &mut b).unwrap();
             image_r.push(r);
             image_g.push(g);
             image_b.push(b);
