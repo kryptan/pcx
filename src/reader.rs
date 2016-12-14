@@ -32,7 +32,7 @@ pub struct Reader<R: io::Read> {
 
 impl Reader<io::BufReader<File>> {
     /// Start reading PCX file.
-    pub fn new_from_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let file = File::open(path)?;
         Self::new(io::BufReader::new(file))
     }

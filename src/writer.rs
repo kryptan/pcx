@@ -1,5 +1,7 @@
 use std::io;
 use std::io::Write;
+use std::fs::File;
+use std::path::Path;
 use byteorder::WriteBytesExt;
 
 use user_error;
@@ -19,6 +21,26 @@ pub struct WriterPaletted<W: io::Write> {
     compressor: Compressor<W>,
     num_rows_left: u16,
     width: u16,
+}
+
+impl WriterRgb<io::BufWriter<File>> {
+    /// Start writing PCX file. This function will create a file if it does not exist, and will overwrite it if it does.
+    ///
+    /// If you are not sure what to pass to `dpi` value just use something like `(100, 100)` or `(300, 300)`.
+    pub fn create_file<P: AsRef<Path>>(path: P, image_size: (u16, u16), dpi: (u16, u16)) -> io::Result<Self> {
+        let file = File::create(path)?;
+        Self::new(io::BufWriter::new(file), image_size, dpi)
+    }
+}
+
+impl WriterPaletted<io::BufWriter<File>> {
+    /// Start writing PCX file. This function will create a file if it does not exist, and will overwrite it if it does.
+    ///
+    /// If you are not sure what to pass to `dpi` value just use something like `(100, 100)` or `(300, 300)`.
+    pub fn create_file<P: AsRef<Path>>(path: P, image_size: (u16, u16), dpi: (u16, u16)) -> io::Result<Self> {
+        let file = File::create(path)?;
+        Self::new(io::BufWriter::new(file), image_size, dpi)
+    }
 }
 
 impl<W: io::Write> WriterRgb<W> {
@@ -64,7 +86,7 @@ impl<W: io::Write> WriterRgb<W> {
         Ok(())
     }
 
-    /// Write next row of pixels from buffer which contain RGB values interleaved (i.e. R, G, B, R, G, B, ...).
+    /// Write next row of pixels from buffer which contains RGB values interleaved (i.e. R, G, B, R, G, B, ...).
     ///
     /// Length of the `rgb` buffer must be equal to the width of the image passed to `new` multiplied by 3.
     /// This function must be called number of times equal to the height of the image.

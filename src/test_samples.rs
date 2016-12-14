@@ -14,7 +14,7 @@ fn test_file(path: &Path) {
     let reference_image = image::load(io::BufReader::new(bmp_file), image::ImageFormat::PNG).unwrap();
     let reference_image = reference_image.to_rgb();
 
-    let mut pcx = Reader::new_from_file(path).unwrap();
+    let mut pcx = Reader::from_file(path).unwrap();
     assert_eq!(pcx.width() as u32, reference_image.width());
     assert_eq!(pcx.height() as u32, reference_image.height());
 

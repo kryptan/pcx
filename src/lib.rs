@@ -3,6 +3,28 @@
 //! PCX is quite old format, it is not recommended to use it for new applications.
 //!
 //! PCX does not contain any color space information. Today one will usually interpret it as containing colors in [sRGB](https://en.wikipedia.org/wiki/sRGB) color space.
+//!
+//! Example for reading PCX image:
+//!
+//!     let mut reader = pcx::Reader::from_file("test-data/marbles.pcx").unwrap();
+//!     println!("width = {}, height = {}, paletted = {}", reader.width(), reader.height(), reader.is_paletted());
+//!     for y in 0..reader.height() {
+//!         if reader.is_paletted() {
+//!             // call reader.next_row_paletted(...) to read next row
+//!         } else {
+//!             // call reader.next_row_rgb_separate(...) or reader.next_row_rgb_interleaved(...) to read next row
+//!         }
+//!     }
+//!
+//! Example for writing PCX image:
+//!
+//!     // Create 5x5 RGB file.
+//!     let mut writer = pcx::WriterRgb::create_file("test.pcx", (5, 5), (300, 300)).unwrap();
+//!     for y in 0..5 {
+//!         // Write 5 green pixels.
+//!         writer.write_row_from_interleaved(&[0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0]);
+//!     }
+//!     writer.finish().unwrap();
 
 // References:
 // https://github.com/FFmpeg/FFmpeg/blob/415f907ce8dcca87c9e7cfdc954b92df399d3d80/libavcodec/pcx.c
