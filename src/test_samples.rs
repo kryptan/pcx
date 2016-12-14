@@ -6,7 +6,7 @@ use image;
 
 use Reader;
 
-fn test_file(path: &Path) {
+fn test_file(path: &Path, interleaved: bool) {
     print!("{} ", path.display());
 
     let bmp_path = path.with_extension("png");
@@ -36,6 +36,32 @@ fn test_file(path: &Path) {
                 let pcx_r = palette[i * 3 + 0];
                 let pcx_g = palette[i * 3 + 1];
                 let pcx_b = palette[i * 3 + 2];
+
+                let reference_pixel = reference_image.get_pixel(x as u32, y as u32);
+                let reference_r = reference_pixel.data[0];
+                let reference_g = reference_pixel.data[1];
+                let reference_b = reference_pixel.data[2];
+
+                assert_eq!(pcx_r, reference_r);
+                assert_eq!(pcx_g, reference_g);
+                assert_eq!(pcx_b, reference_b);
+            }
+        }
+    } else if interleaved {
+        print!("not paletted ");
+
+        let mut image = Vec::new();
+        for _ in 0..pcx.height() {
+            let mut rgb: Vec<u8> = iter::repeat(0).take((pcx.width() as usize) * 3).collect();
+            pcx.next_row_rgb(&mut rgb).unwrap();
+            image.push(rgb);
+        }
+
+        for y in 0..reference_image.height() {
+            for x in 0..reference_image.width() {
+                let pcx_r = image[y as usize][(x as usize) * 3 + 0];
+                let pcx_g = image[y as usize][(x as usize) * 3 + 1];
+                let pcx_b = image[y as usize][(x as usize) * 3 + 2];
 
                 let reference_pixel = reference_image.get_pixel(x as u32, y as u32);
                 let reference_r = reference_pixel.data[0];
@@ -91,7 +117,8 @@ fn test_files(path: &str) {
         if let Some(ext) = entry.path().extension() {
             let ext = ext.to_str().unwrap();
             if ext == "pcx" || ext == "PCX" {
-                test_file(entry.path())
+                test_file(entry.path(), false);
+                test_file(entry.path(), true);
             }
         }
     }

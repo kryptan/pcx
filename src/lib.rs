@@ -12,7 +12,7 @@
 //!         if reader.is_paletted() {
 //!             // call reader.next_row_paletted(...) to read next row
 //!         } else {
-//!             // call reader.next_row_rgb_separate(...) or reader.next_row_rgb_interleaved(...) to read next row
+//!             // call reader.next_row_rgb(...) or reader.next_row_rgb_separate(...) to read next row
 //!         }
 //!     }
 //!
@@ -22,7 +22,7 @@
 //!     let mut writer = pcx::WriterRgb::create_file("test.pcx", (5, 5), (300, 300)).unwrap();
 //!     for y in 0..5 {
 //!         // Write 5 green pixels.
-//!         writer.write_row_from_interleaved(&[0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0]);
+//!         writer.write_row(&[0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0]);
 //!     }
 //!     writer.finish().unwrap();
 
@@ -59,7 +59,7 @@ mod tests {
     use std::iter;
     use {Reader, WriterRgb, WriterPaletted};
 
-    fn round_trip_rgb(width: u16, height: u16) {
+    fn round_trip_rgb_separate(width: u16, height: u16) {
         let mut pcx = Vec::new();
 
         {
@@ -95,6 +95,32 @@ mod tests {
                 assert_eq!(g[x as usize], (x & 0xFF) as u8);
                 assert_eq!(b[x as usize], (y & 0xFF) as u8);
             }
+        }
+    }
+
+    fn round_trip_rgb_interleaved(width: u16, height: u16) {
+        let mut pcx = Vec::new();
+
+        let written_rgb: Vec<u8> = (0..(width as usize) * 3).map(|v| (v & 0xFF) as u8).collect();
+        {
+            let mut writer = WriterRgb::new(&mut pcx, (width, height), (300, 300)).unwrap();
+
+            for _ in 0..height {
+                writer.write_row(&written_rgb).unwrap();
+            }
+            writer.finish().unwrap();
+        }
+
+        let mut reader = Reader::new(&pcx[..]).unwrap();
+        assert_eq!(reader.dimensions(), (width, height));
+        assert_eq!(reader.is_paletted(), false);
+        assert_eq!(reader.palette_length(), None);
+
+        let mut read_rgb: Vec<u8> = iter::repeat(0).take((width as usize) * 3).collect();
+
+        for _ in 0..height {
+            reader.next_row_rgb(&mut read_rgb).unwrap();
+            assert_eq!(written_rgb, read_rgb);
         }
     }
 
@@ -141,7 +167,8 @@ mod tests {
     fn small_round_trip() {
         for width in 1..40 {
             for height in 1..40 {
-                round_trip_rgb(width, height);
+                round_trip_rgb_separate(width, height);
+                round_trip_rgb_interleaved(width, height);
                 round_trip_paletted(width, height);
             }
         }
@@ -149,8 +176,10 @@ mod tests {
 
     #[test]
     fn large_round_trip_rgb() {
-        round_trip_rgb(0xFFFF - 1, 1);
-        round_trip_rgb(1, 0xFFFF);
+        round_trip_rgb_separate(0xFFFF - 1, 1);
+        round_trip_rgb_separate(1, 0xFFFF);
+        round_trip_rgb_interleaved(0xFFFF - 1, 1);
+        round_trip_rgb_interleaved(1, 0xFFFF);
     }
 
     #[test]

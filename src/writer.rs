@@ -92,13 +92,13 @@ impl<W: io::Write> WriterRgb<W> {
     /// This function must be called number of times equal to the height of the image.
     ///
     /// Order of rows is from top to bottom, order of pixels is from left to right.
-    pub fn write_row_from_interleaved(&mut self, rgb: &[u8]) -> io::Result<()> {
+    pub fn write_row(&mut self, rgb: &[u8]) -> io::Result<()> {
         if self.num_rows_left == 0 {
-            return user_error("pcx::WriterRgb::write_row_from_interleaved: all rows were already written");
+            return user_error("pcx::WriterRgb::write_row: all rows were already written");
         }
 
         if rgb.len() != (self.width as usize) * 3 {
-            return user_error("pcx::WriterRgb::write_row_from_interleaved: buffer length must be equal to the width of the image multiplied by 3");
+            return user_error("pcx::WriterRgb::write_row: buffer length must be equal to the width of the image multiplied by 3");
         }
 
         for color in 0..3 {

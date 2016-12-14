@@ -184,16 +184,16 @@ impl<R: io::Read> Reader<R> {
     /// `rgb` buffer length must be equal to the image width multiplied by 3.
     ///
     /// Order of rows is from top to bottom, order of pixels is from left to right.
-    pub fn next_row_rgb_interleaved(&mut self, rgb: &mut [u8]) -> io::Result<()> {
+    pub fn next_row_rgb(&mut self, rgb: &mut [u8]) -> io::Result<()> {
         if self.is_paletted() {
-            return user_error("pcx::Reader::next_row_rgb_interleaved called on paletted image");
+            return user_error("pcx::Reader::next_row_rgb called on paletted image");
         }
 
         /// API for reading lanes is not exposed so users have no way of messing that up.
         assert_eq!(self.num_lanes_read % 3, 0);
 
         if rgb.len() != (self.width() as usize) * 3 {
-            return user_error("pcx::Reader::next_row_rgb_interleaved: buffer length must be equal to the width of the image multiplied by 3");
+            return user_error("pcx::Reader::next_row_rgb: buffer length must be equal to the width of the image multiplied by 3");
         }
 
         for color in 0..3 {
