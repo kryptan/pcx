@@ -10,6 +10,7 @@ use low_level::rle::Compressor;
 use low_level::PALETTE_START;
 
 /// Create 24-bit RGB PCX image.
+#[derive(Clone, Debug)]
 pub struct WriterRgb<W: io::Write> {
     compressor: Compressor<W>,
     num_rows_left: u16,
@@ -17,6 +18,7 @@ pub struct WriterRgb<W: io::Write> {
 }
 
 /// Create paletted PCX image.
+#[derive(Clone, Debug)]
 pub struct WriterPaletted<W: io::Write> {
     compressor: Compressor<W>,
     num_rows_left: u16,

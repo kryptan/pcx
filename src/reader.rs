@@ -7,6 +7,7 @@ use user_error;
 use low_level::{Header, PALETTE_START};
 use low_level::rle::Decompressor;
 
+#[derive(Clone, Debug)]
 enum PixelReader<R: io::Read> {
     Compressed(Decompressor<R>),
     NotCompressed(R),
@@ -22,6 +23,7 @@ impl<R: io::Read> io::Read for PixelReader<R> {
 }
 
 /// PCX file reader.
+#[derive(Clone, Debug)]
 pub struct Reader<R: io::Read> {
     /// File header. All useful values are available via `Reader` methods so you don't actually need it.
     pub header: Header,

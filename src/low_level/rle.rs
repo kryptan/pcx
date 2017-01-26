@@ -4,6 +4,7 @@ use std::io;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
 /// Decompress RLE.
+#[derive(Clone, Debug)]
 pub struct Decompressor<S: io::Read> {
     stream: S,
 
@@ -70,6 +71,7 @@ impl<S: io::Read> io::Read for Decompressor<S> {
 /// Warning: compressor does not implement `Drop` and will not automatically get flushed on destruction. Call `finish()` or `flush()` to flush it.
 /// If it would implement `Drop` it would be impossible to implement `finish()` due to
 /// [restrictions](https://doc.rust-lang.org/error-index.html#E0509) of the Rust language.
+#[derive(Clone, Debug)]
 pub struct Compressor<S: io::Write> {
     stream: S,
 

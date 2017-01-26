@@ -30,7 +30,7 @@ typedef struct _PcxHeader
 
 /// File format version.
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Version {
     /// Version 2.5 with fixed EGA palette information.
     V0 = 0,
@@ -45,7 +45,7 @@ pub enum Version {
 }
 
 /// Parsed header of PCX file.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Header {
     /// Version of the file format.
     pub version: Version,
