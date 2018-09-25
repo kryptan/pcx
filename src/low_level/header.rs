@@ -80,7 +80,7 @@ fn error<T>(msg: &str) -> io::Result<T> {
 }
 
 fn lane_proper_length(width: u16, bit_depth: u8) -> u16 {
-    (((width as u32) * (bit_depth as u32) - 1) / 8 + 1) as u16
+    (((u32::from(width)) * (u32::from(bit_depth)) - 1) / 8 + 1) as u16
 }
 
 impl Header {
@@ -121,8 +121,8 @@ impl Header {
         let y_dpi = stream.read_u16::<LittleEndian>()?;
 
         let mut palette = [[0; 3]; 16];
-        for i in 0..16 {
-            stream.read_exact(&mut palette[i])?;
+        for palette_entry in &mut palette {
+            stream.read_exact(palette_entry)?;
         }
 
         let _reserved_0 = stream.read_u8()?;
@@ -151,15 +151,15 @@ impl Header {
         }
 
         Ok(Header {
-            version: version,
+            version,
             is_compressed: encoding == 1,
-            bit_depth: bit_depth,
+            bit_depth,
             size: (width, height),
             start: (x_start, y_start),
             dpi: (x_dpi, y_dpi),
-            palette: palette,
-            number_of_color_planes: number_of_color_planes,
-            lane_length: lane_length,
+            palette,
+            number_of_color_planes,
+            lane_length,
         })
     }
 
@@ -176,7 +176,7 @@ impl Header {
     pub fn palette_length(&self) -> Option<u16> {
         match (self.number_of_color_planes, self.bit_depth) {
             (3, 8) => None,
-            (number_of_color_planes, bit_depth) => Some(1 << ((bit_depth as u16) * (number_of_color_planes as u16))),
+            (number_of_color_planes, bit_depth) => Some(1 << ((u16::from(bit_depth)) * (u16::from(number_of_color_planes)))),
         }
     }
 }
@@ -206,7 +206,7 @@ pub fn write<W: io::Write>(stream: &mut W, paletted: bool, size: (u16, u16), dpi
 
     // Write 16-color palette (not used as we will use 256-color palette instead).
     for _ in 0..16 {
-        stream.write(&[0, 0, 0])?;
+        stream.write_all(&[0, 0, 0])?;
     }
 
     let lane_length = size.0 + (size.0 & 1); // width rounded up to even
@@ -217,9 +217,7 @@ pub fn write<W: io::Write>(stream: &mut W, paletted: bool, size: (u16, u16), dpi
     stream.write_u16::<LittleEndian>(1)?; // palette kind (not used)
 
     // Unused values in header.
-    for _ in 0..58 {
-        stream.write(&[0])?;
-    }
+    stream.write_all(&[0u8; 58])?;
 
     Ok(())
 }

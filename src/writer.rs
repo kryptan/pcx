@@ -77,11 +77,11 @@ impl<W: io::Write> WriterRgb<W> {
             return user_error("pcx::WriterRgb::write_row_from_separate: buffer lengths must be equal to the width of the image");
         }
 
-        self.compressor.write(r)?;
+        self.compressor.write_all(r)?;
         self.compressor.pad()?;
-        self.compressor.write(g)?;
+        self.compressor.write_all(g)?;
         self.compressor.pad()?;
-        self.compressor.write(b)?;
+        self.compressor.write_all(b)?;
         self.compressor.pad()?;
 
         self.num_rows_left -= 1;
@@ -163,7 +163,7 @@ impl<W: io::Write> WriterPaletted<W> {
             return user_error("pcx::WriterPaletted::write_row: buffer length must be equal to the width of the image");
         }
 
-        self.compressor.write(row)?;
+        self.compressor.write_all(row)?;
         self.compressor.pad()?;
 
         self.num_rows_left -= 1;
@@ -184,7 +184,7 @@ impl<W: io::Write> WriterPaletted<W> {
 
         let mut stream = self.compressor.finish()?;
         stream.write_u8(PALETTE_START)?;
-        stream.write(palette)?;
+        stream.write_all(palette)?;
         for _ in 0..(256 * 3 - palette.len()) {
             stream.write_u8(0)?;
         }
