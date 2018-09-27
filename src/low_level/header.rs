@@ -1,5 +1,5 @@
 //! PCX file header.
-use std::io;
+use std::{io, u16};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use low_level::MAGIC_BYTE;
@@ -111,7 +111,7 @@ impl Header {
         let x_end = stream.read_u16::<LittleEndian>()?;
         let y_end = stream.read_u16::<LittleEndian>()?;
 
-        if x_end < x_start || y_end < y_start {
+        if x_end < x_start || y_end < y_start || x_end - x_start == u16::MAX || y_end - y_start == u16::MAX {
             return error("PCX: invalid dimensions");
         }
 
@@ -220,4 +220,12 @@ pub fn write<W: io::Write>(stream: &mut W, paletted: bool, size: (u16, u16), dpi
     stream.write_all(&[0u8; 58])?;
 
     Ok(())
+}
+
+#[test]
+fn fuzzer_test_case() {
+    let mut data: &[u8] = &[0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
+
+    // Check that it loads without panic.
+    assert!(Header::load(&mut data).is_err());
 }

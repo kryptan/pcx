@@ -1,0 +1,25 @@
+[package]
+name = "pcx-fuzz"
+version = "0.0.1"
+authors = ["Automatically generated"]
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies.pcx]
+path = ".."
+[dependencies.libfuzzer-sys]
+git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "rle"
+path = "fuzz_targets/rle.rs"
+
+[[bin]]
+name = "header"
+path = "fuzz_targets/header.rs"
