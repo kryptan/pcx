@@ -169,12 +169,12 @@ impl<S: io::Write> io::Write for Compressor<S> {
     }
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(any(test, fuzzing))]
+pub mod tests {
     use byteorder::{ReadBytesExt, WriteBytesExt};
     use super::{Compressor, Decompressor};
 
-    fn round_trip(data: &[u8]) {
+    pub fn round_trip(data: &[u8]) {
         use std::io::{Read, Write};
 
         let mut compressed = Vec::new();
@@ -192,7 +192,7 @@ mod tests {
         assert_eq!(result, data);
     }
 
-    fn round_trip_one_by_one(data: &[u8]) {
+    pub fn round_trip_one_by_one(data: &[u8]) {
         use std::io::Write;
 
         let mut compressed = Vec::new();
