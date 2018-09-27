@@ -12,8 +12,8 @@ license = "WTFPL"
 exclude = ["pcx.iml", "test-data"]
 
 [dependencies]
-byteorder = "0.5"
+byteorder = "1.2.6"
 
 [dev-dependencies]
-walkdir = "1.0.3"
-image = { version = "0.10.4", features = ["png_codec"], default-features = false }
+walkdir = "2.2.5"
+image = { version = "0.20.0", features = ["png_codec"], default-features = false }
