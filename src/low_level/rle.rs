@@ -16,7 +16,7 @@ impl<S: io::Read> Decompressor<S> {
     /// Create new decompressor from the stream.
     pub fn new(stream: S) -> Self {
         Decompressor {
-            stream: stream,
+            stream,
             run_count: 0,
             run_value: 0,
         }
@@ -31,15 +31,15 @@ impl<S: io::Read> Decompressor<S> {
 impl<S: io::Read> io::Read for Decompressor<S> {
     fn read(&mut self, mut buffer: &mut [u8]) -> io::Result<usize> {
         let mut read = 0;
-        while buffer.len() > 0 {
+        while !buffer.is_empty() {
             // Write the pixel run to the buffer.
-            while self.run_count > 0 && buffer.len() > 0 {
+            while self.run_count > 0 && !buffer.is_empty() {
                 buffer.write_u8(self.run_value)?;
                 self.run_count -= 1;
                 read += 1;
             }
 
-            if buffer.len() == 0 {
+            if buffer.is_empty() {
                 return Ok(read);
             }
 
@@ -86,10 +86,10 @@ impl<S: io::Write> Compressor<S> {
     /// Create new compressor which will write to the stream.
     pub fn new(stream: S, lane_length: u16) -> Self {
         Compressor {
-            stream: stream,
+            stream,
             run_count: 0,
             run_value: 0,
-            lane_length: lane_length,
+            lane_length,
             lane_position: 0,
         }
     }
@@ -99,7 +99,7 @@ impl<S: io::Write> Compressor<S> {
         use std::io::Write;
 
         while self.lane_position != 0 {
-            self.write(&[0])?;
+            self.write_all(&[0])?;
         }
 
         Ok(())
@@ -133,7 +133,7 @@ impl<S: io::Write> io::Write for Compressor<S> {
 
         let mut written = 0;
 
-        while buffer.len() > 0 {
+        while !buffer.is_empty() {
             let byte = {
                 let mut byte_buffer = [0; 1];
                 if buffer.read(&mut byte_buffer)? == 0 {

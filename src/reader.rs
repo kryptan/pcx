@@ -15,9 +15,9 @@ enum PixelReader<R: io::Read> {
 
 impl<R: io::Read> io::Read for PixelReader<R> {
     fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
-        match self {
-            &mut PixelReader::Compressed(ref mut decompressor) => decompressor.read(buffer),
-            &mut PixelReader::NotCompressed(ref mut stream) => stream.read(buffer),
+        match *self {
+            PixelReader::Compressed(ref mut decompressor) => decompressor.read(buffer),
+            PixelReader::NotCompressed(ref mut stream) => stream.read(buffer),
         }
     }
 }
@@ -51,8 +51,8 @@ impl<R: io::Read> Reader<R> {
         };
 
         Ok(Reader {
-            header: header,
-            pixel_reader: pixel_reader,
+            header,
+            pixel_reader,
             num_lanes_read: 0,
         })
     }
@@ -209,7 +209,7 @@ impl<R: io::Read> Reader<R> {
     }
 
     fn skip_padding(&mut self) -> io::Result<()> {
-        if self.num_lanes_read + 1 < (self.height() as u32) * (self.header.number_of_color_planes as u32) {
+        if self.num_lanes_read + 1 < u32::from(self.height()) * u32::from(self.header.number_of_color_planes) {
             // Skip padding.
             for _ in 0..self.header.lane_padding() {
                 self.pixel_reader.read_u8()?;
@@ -293,8 +293,8 @@ impl<R: io::Read> Reader<R> {
                     return Err(io::Error::new(io::ErrorKind::InvalidData, "no 256-color palette"));
                 }
 
-                &mut buffer[0..(TEMP_BUFFER_LENGTH - pos - 1)].copy_from_slice(&temp_buffer[(pos + 1)..TEMP_BUFFER_LENGTH]);
-                &mut buffer[(TEMP_BUFFER_LENGTH - pos - 1)..PALETTE_LENGTH].copy_from_slice(&temp_buffer[0..pos]);
+                buffer[0..(TEMP_BUFFER_LENGTH - pos - 1)].copy_from_slice(&temp_buffer[(pos + 1)..TEMP_BUFFER_LENGTH]);
+                buffer[(TEMP_BUFFER_LENGTH - pos - 1)..PALETTE_LENGTH].copy_from_slice(&temp_buffer[0..pos]);
 
                 return Ok(256);
             }
