@@ -9,7 +9,7 @@ repository = "https://github.com/kryptan/pcx"
 readme = "README.md"
 keywords = ["pcx", "image", "paintbrush"]
 license = "WTFPL"
-exclude = ["pcx.iml", "test-data"]
+exclude = ["/test-data"]
 
 [dependencies]
 byteorder = "1.2.6"
