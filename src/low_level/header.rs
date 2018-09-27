@@ -80,7 +80,7 @@ fn error<T>(msg: &str) -> io::Result<T> {
 }
 
 fn lane_proper_length(width: u16, bit_depth: u8) -> u16 {
-    (((u32::from(width)) * (u32::from(bit_depth)) - 1) / 8 + 1) as u16
+    ((u32::from(width) * u32::from(bit_depth) - 1) / 8 + 1) as u16
 }
 
 impl Header {
@@ -133,7 +133,7 @@ impl Header {
         let mut _reserved_1 = [0; 58];
         stream.read_exact(&mut _reserved_1)?;
 
-        // Must be one of the supported format.
+        // Must be one of the supported formats.
         match (number_of_color_planes, bit_depth) {
             (3, 8) | // 24-bit RGB
             (1, 1) | // monochrome
@@ -176,7 +176,7 @@ impl Header {
     pub fn palette_length(&self) -> Option<u16> {
         match (self.number_of_color_planes, self.bit_depth) {
             (3, 8) => None,
-            (number_of_color_planes, bit_depth) => Some(1 << ((u16::from(bit_depth)) * (u16::from(number_of_color_planes)))),
+            (number_of_color_planes, bit_depth) => Some(1 << (u16::from(bit_depth) * u16::from(number_of_color_planes))),
         }
     }
 }
