@@ -123,7 +123,7 @@ impl<S: io::Write> Compressor<S> {
             }
         }
 
-        self.stream.flush()
+        Ok(())
     }
 }
 

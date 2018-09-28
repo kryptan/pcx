@@ -105,7 +105,7 @@ impl<R: io::Read> Reader<R> {
             let buffer_len = buffer.len();
             let offset = buffer.len() - lane_length;
 
-            // Place packed row at the end of buffer, this will allow us easily to unpack it.
+            // Place packed row at the end of buffer, this will allow us to easily unpack it.
             self.next_lane(&mut buffer[offset..buffer_len])?;
 
             macro_rules! unpack_bits {
@@ -131,7 +131,7 @@ impl<R: io::Read> Reader<R> {
             let number_of_color_planes = self.header.number_of_color_planes as usize;
             let half_len = buffer.len() / 2;
 
-            // Place packed rows at the first half of the buffer, this will allow us easily to unpack them.
+            // Place packed rows at the first half of the buffer, this will allow us to easily unpack them.
             for i in 0..number_of_color_planes {
                 self.next_lane(&mut buffer[(lane_length * i)..(lane_length * (i + 1))])?;
             }
@@ -173,7 +173,7 @@ impl<R: io::Read> Reader<R> {
             return user_error("pcx::Reader::next_row_rgb_separate called on paletted image");
         }
 
-        /// API for reading lanes is not exposed so users have no way of messing that up.
+        // API for reading lanes is not exposed so users have no way of messing that up.
         assert_eq!(self.num_lanes_read % 3, 0);
 
         self.next_lane(r)?;
@@ -191,7 +191,7 @@ impl<R: io::Read> Reader<R> {
             return user_error("pcx::Reader::next_row_rgb called on paletted image");
         }
 
-        /// API for reading lanes is not exposed so users have no way of messing that up.
+        // API for reading lanes is not exposed so users have no way of messing that up.
         assert_eq!(self.num_lanes_read % 3, 0);
 
         if rgb.len() != (self.width() as usize) * 3 {

@@ -205,9 +205,7 @@ pub fn write<W: io::Write>(stream: &mut W, paletted: bool, size: (u16, u16), dpi
     stream.write_u16::<LittleEndian>(dpi.1)?;
 
     // Write 16-color palette (not used as we will use 256-color palette instead).
-    for _ in 0..16 {
-        stream.write_all(&[0, 0, 0])?;
-    }
+    stream.write_all(&[0u8; 16*3])?;
 
     let lane_length = size.0 + (size.0 & 1); // width rounded up to even
 
