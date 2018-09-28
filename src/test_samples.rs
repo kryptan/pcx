@@ -9,9 +9,9 @@ use Reader;
 fn test_file(path: &Path, interleaved: bool) {
     print!("{} ", path.display());
 
-    let bmp_path = path.with_extension("png");
-    let bmp_file = File::open(bmp_path).unwrap();
-    let reference_image = image::load(io::BufReader::new(bmp_file), image::ImageFormat::PNG).unwrap();
+    let png_path = path.with_extension("png");
+    let png_file = File::open(png_path).unwrap();
+    let reference_image = image::load(io::BufReader::new(png_file), image::ImageFormat::PNG).unwrap();
     let reference_image = reference_image.to_rgb();
 
     let mut pcx = Reader::from_file(path).unwrap();

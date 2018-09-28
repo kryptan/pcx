@@ -1,6 +1,6 @@
 [package]
 name = "pcx"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["kryptan"]
 description = "Library for reading & writing PCX images."
 documentation = "https://docs.rs/pcx/"

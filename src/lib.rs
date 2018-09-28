@@ -25,6 +25,9 @@
 //!         writer.write_row(&[0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0]);
 //!     }
 //!     writer.finish().unwrap();
+//!
+//! This library does not implement its own error type, instead it uses `std::io::Error`. In the case of invalid
+//! PCX file it will return error with `.kind() == ErrorKind::InvalidData`.
 
 // References:
 // https://github.com/FFmpeg/FFmpeg/blob/415f907ce8dcca87c9e7cfdc954b92df399d3d80/libavcodec/pcx.c
