@@ -23,8 +23,8 @@ impl<S: io::Read> Decompressor<S> {
     }
 
     /// Stop decompression process and get underlying stream.
-    pub fn finish(self) -> S {
-        self.stream
+    pub fn finish(&mut self) -> &mut S {
+        &mut self.stream
     }
 }
 

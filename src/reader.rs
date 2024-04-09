@@ -116,7 +116,7 @@ impl<R: io::Read> Reader<R> {
                         }
                     }
                 }
-            };
+            }
 
             // Unpack packed bits into bytes.
             match self.header.bit_depth {
@@ -240,7 +240,7 @@ impl<R: io::Read> Reader<R> {
     ///
     /// Returns number of colors in palette or zero if there is no palette. The actual number of bytes written to the output buffer is
     /// equal to the returned value multiplied by 3. Format of the output buffer is R, G, B, R, G, B, ...
-    pub fn read_palette(self, buffer: &mut [u8]) -> io::Result<usize> {
+    pub fn read_palette(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
         match self.header.palette_length() {
             Some(2) => {
                 // Special case - monochrome image.
@@ -257,7 +257,7 @@ impl<R: io::Read> Reader<R> {
 
                 return Ok(2 as usize);
             }
-            Some(palette_length @ 1...16) => {
+            Some(palette_length @ 1..=16) => {
                 // Palettes of 16 colors or smaller are stored in the header.
                 for i in 0..(palette_length as usize) {
                     (&mut buffer[(i * 3)..((i + 1) * 3)]).copy_from_slice(&self.header.palette[i]);
@@ -271,7 +271,7 @@ impl<R: io::Read> Reader<R> {
         }
 
         // Stop decompressing and continue reading underlying stream.
-        let mut stream = match self.pixel_reader {
+        let stream = match &mut self.pixel_reader {
             PixelReader::Compressed(decompressor) => decompressor.finish(),
             PixelReader::NotCompressed(stream) => stream,
         };
