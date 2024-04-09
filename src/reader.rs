@@ -241,6 +241,10 @@ impl<R: io::Read> Reader<R> {
     /// Returns number of colors in palette or zero if there is no palette. The actual number of bytes written to the output buffer is
     /// equal to the returned value multiplied by 3. Format of the output buffer is R, G, B, R, G, B, ...
     pub fn read_palette(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        let length = self.header.palette_length();
+
+        assert!(length.is_none() || buffer.len() >= length.unwrap() as usize, format!("Provided buffer length {} is insufficient. Require {} ", buffer.len(), length.unwrap()));
+
         match self.header.palette_length() {
             Some(2) => {
                 // Special case - monochrome image.
