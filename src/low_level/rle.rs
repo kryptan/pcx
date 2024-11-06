@@ -114,7 +114,7 @@ impl<S: io::Write> Compressor<S> {
     fn flush_compressor(&mut self) -> io::Result<()> {
         match (self.run_count, self.run_value) {
             (0, _) => {}
-            (1, run_value @ 0...0xBF) => {
+            (1, run_value @ 0..=0xBF) => {
                 self.stream.write_u8(run_value)?;
             }
             (run_count, run_value) => {

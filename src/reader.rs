@@ -116,7 +116,7 @@ impl<R: io::Read> Reader<R> {
                         }
                     }
                 }
-            };
+            }
 
             // Unpack packed bits into bytes.
             match self.header.bit_depth {
@@ -257,7 +257,7 @@ impl<R: io::Read> Reader<R> {
 
                 return Ok(2 as usize);
             }
-            Some(palette_length @ 1...16) => {
+            Some(palette_length @ 1..=16) => {
                 // Palettes of 16 colors or smaller are stored in the header.
                 for i in 0..(palette_length as usize) {
                     (&mut buffer[(i * 3)..((i + 1) * 3)]).copy_from_slice(&self.header.palette[i]);
