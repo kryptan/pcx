@@ -1,5 +1,4 @@
-//! Implementation of compression/decompression using variant of RLE (run-length-encoding) used in PCX files.
-
+//! Implementation of RLE (run-length encoding) compression/decompression used in PCX files.
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io;
 
@@ -13,7 +12,7 @@ pub struct Decompressor<S: io::Read> {
 }
 
 impl<S: io::Read> Decompressor<S> {
-    /// Create new decompressor from the stream.
+    /// Create a new decompressor from the stream.
     pub fn new(stream: S) -> Self {
         Decompressor {
             stream,

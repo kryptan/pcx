@@ -1,8 +1,7 @@
 //! PCX file header.
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::{io, u16};
-
 use low_level::MAGIC_BYTE;
+use std::{io, u16};
 
 /*
 typedef struct _PcxHeader

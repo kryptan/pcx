@@ -125,7 +125,7 @@ impl<R: io::Read> Reader<R> {
                 1 => unpack_bits!(1),
                 2 => unpack_bits!(2),
                 4 => unpack_bits!(4),
-                _ => unreachable!(), // bit depth was checked while reading header
+                _ => unreachable!(), // bit depth was checked while reading the header
             }
         } else {
             // Planar, 4, 8 or 16 colors.

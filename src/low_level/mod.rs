@@ -4,8 +4,8 @@ pub mod rle;
 
 pub use self::header::Header;
 
-/// Magic byte which is used as first byte in all PCX files.
+/// Magic byte which is used as a first byte in all PCX files.
 pub const MAGIC_BYTE: u8 = 0xA;
 
-/// Byte marking start of 256-color palette.
+/// Byte marking the start of the 256-color palette.
 pub const PALETTE_START: u8 = 0xC;

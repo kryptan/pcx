@@ -1,22 +1,23 @@
-//! Library for reading and writing PCX image format.
+//! Library for reading and writing PCX images.
 //!
-//! PCX is quite old format, it is not recommended to use it for new applications.
-//!
-//! PCX does not contain any color space information. Today one will usually interpret it as containing colors in [sRGB](https://en.wikipedia.org/wiki/sRGB) color space.
-//!
-//! Example for reading PCX image:
+//! Example of reading a PCX image:
 //!
 //!     let mut reader = pcx::Reader::from_file("test-data/marbles.pcx").unwrap();
 //!     println!("width = {}, height = {}, paletted = {}", reader.width(), reader.height(), reader.is_paletted());
 //!     for y in 0..reader.height() {
 //!         if reader.is_paletted() {
-//!             // call reader.next_row_paletted(...) to read next row
+//!             // call reader.next_row_paletted(...) to read the next row
 //!         } else {
-//!             // call reader.next_row_rgb(...) or reader.next_row_rgb_separate(...) to read next row
+//!             // call reader.next_row_rgb(...) or reader.next_row_rgb_separate(...) to read the next row
 //!         }
 //!     }
+//! 
+//!     // palette can be stored at the end of file so we read it after all the pixels
+//!     if reader.is_paletted() {
+//!         // call reader.read_palette(...) to get the palette
+//!     }
 //!
-//! Example for writing PCX image:
+//! Example of writing a PCX image:
 //!
 //!     // Create 5x5 RGB file.
 //!     let mut writer = pcx::WriterRgb::create_file("test.pcx", (5, 5), (300, 300)).unwrap();
@@ -26,8 +27,8 @@
 //!     }
 //!     writer.finish().unwrap();
 //!
-//! This library does not implement its own error type, instead it uses `std::io::Error`. In the case of invalid
-//! PCX file it will return error with `.kind() == ErrorKind::InvalidData`.
+//! This library does not implement its own error type, instead it uses `std::io::Error`. In the case of an invalid
+//! PCX file it will return an error with `.kind() == ErrorKind::InvalidData`.
 
 // References:
 // https://github.com/FFmpeg/FFmpeg/blob/415f907ce8dcca87c9e7cfdc954b92df399d3d80/libavcodec/pcx.c
@@ -52,7 +53,7 @@ mod writer;
 #[cfg(test)]
 mod test_samples;
 
-// Error caused by incorrect use of the API.
+// Error caused by the incorrect usage of the API.
 fn user_error<T>(error: &str) -> io::Result<T> {
     Err(io::Error::new(io::ErrorKind::InvalidInput, error))
 }
