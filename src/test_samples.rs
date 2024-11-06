@@ -1,10 +1,9 @@
+use crate::Reader;
 use image;
 use std::fs::File;
 use std::path::Path;
 use std::{io, iter};
 use walkdir::WalkDir;
-
-use crate::Reader;
 
 #[derive(Eq, PartialEq)]
 enum ReadKind {
@@ -125,7 +124,7 @@ fn test_file(path: &Path, kind: ReadKind) {
     println!("- Ok.");
 }
 
-fn test_files(path: &str) {
+fn test_files(path: &str, test_all: bool) {
     println!("Testing samples at {}", path);
     for entry in WalkDir::new(path) {
         let entry = entry.unwrap();
@@ -133,9 +132,11 @@ fn test_files(path: &str) {
         if let Some(ext) = entry.path().extension() {
             let ext = ext.to_str().unwrap();
             if ext == "pcx" || ext == "PCX" {
-                test_file(entry.path(), ReadKind::Interleaved);
-                test_file(entry.path(), ReadKind::Separate);
                 test_file(entry.path(), ReadKind::Entire);
+                if test_all {
+                    test_file(entry.path(), ReadKind::Separate);
+                    test_file(entry.path(), ReadKind::Interleaved);
+                }
             }
         }
     }
@@ -144,12 +145,20 @@ fn test_files(path: &str) {
 #[test]
 fn samples() {
     let samples_path = env!("CARGO_MANIFEST_DIR").to_string() + "/test-data";
-    test_files(&samples_path);
+    test_files(&samples_path, true);
+}
+
+#[test]
+fn samples2() {
+    let samples_path = env!("CARGO_MANIFEST_DIR").to_string() + "/test-data2";
+    if Path::new(&samples_path).exists() {
+        test_files(&samples_path, false);
+    }
 }
 
 #[test]
 fn samples_env() {
     if let Some(samples_path) = option_env!("PCX_RS_SAMPLES") {
-        test_files(samples_path);
+        test_files(samples_path, true);
     }
 }

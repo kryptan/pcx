@@ -345,7 +345,7 @@ impl<R: io::Read> Reader<R> {
 impl<R: io::Seek + io::Read> Reader<R> {
     /// Read the entire RGB image, converting from paletted to RGB if necessarry.
     ///
-    /// `rgb` buffer length must be equal to width*height*3.
+    /// `rgb` buffer length must be equal to `width*height*3`.
     ///
     /// Order of rows is from top to bottom, order of pixels is from left to right. Format of the
     /// output buffer is R, G, B, R, G, B, ...
@@ -359,7 +359,15 @@ impl<R: io::Seek + io::Read> Reader<R> {
             self.get_palette(&mut palette)?;
 
             for y in 0..height {
-                self.next_row_paletted(&mut rgb[y * row_size..(y * row_size + width)])?;
+                match self.next_row_paletted(&mut rgb[y * row_size..(y * row_size + width)]) {
+                    // parse some weird images that appear in the wild
+                    Err(error) if error.kind() == io::ErrorKind::UnexpectedEof => {}
+                    Err(error) => {
+                        return Err(error);
+                    }
+                    _ => {}
+                }
+
                 for x in (0..width).rev() {
                     let color_index = rgb[y * row_size + x] as usize;
                     rgb[y * row_size + x * 3 + 0] = palette[color_index * 3 + 0];
