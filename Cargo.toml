@@ -17,7 +17,7 @@ byteorder = "1.2.6"
 
 [dev-dependencies]
 walkdir = "2.2.5"
-image = { version = "0.20.0", features = ["png_codec"], default-features = false }
+image = { version = "0.25.5", features = ["png"], default-features = false }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

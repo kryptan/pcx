@@ -19,8 +19,8 @@ fn test_file(path: &Path, kind: ReadKind) {
     let png_path = path.with_extension("png");
     let png_file = File::open(png_path).unwrap();
     let reference_image =
-        image::load(io::BufReader::new(png_file), image::ImageFormat::PNG).unwrap();
-    let reference_image = reference_image.to_rgb();
+        image::load(io::BufReader::new(png_file), image::ImageFormat::Png).unwrap();
+    let reference_image = reference_image.to_rgb8();
 
     let mut pcx = Reader::from_file(path).unwrap();
     assert_eq!(pcx.width() as u32, reference_image.width());
@@ -35,9 +35,9 @@ fn test_file(path: &Path, kind: ReadKind) {
                 let index = ((y as usize * pcx.width() as usize) + x as usize) * 3;
                 let reference = reference_image.get_pixel(x as u32, y as u32);
 
-                assert_eq!(buffer[index + 0], reference.data[0]);
-                assert_eq!(buffer[index + 1], reference.data[1]);
-                assert_eq!(buffer[index + 2], reference.data[2]);
+                assert_eq!(buffer[index + 0], reference.0[0]);
+                assert_eq!(buffer[index + 1], reference.0[1]);
+                assert_eq!(buffer[index + 2], reference.0[2]);
             }
         }
         return;
@@ -61,9 +61,9 @@ fn test_file(path: &Path, kind: ReadKind) {
                 let i = image[y as usize][x as usize] as usize;
                 let reference = reference_image.get_pixel(x as u32, y as u32);
 
-                assert_eq!(palette[i * 3 + 0], reference.data[0]);
-                assert_eq!(palette[i * 3 + 1], reference.data[1]);
-                assert_eq!(palette[i * 3 + 2], reference.data[2]);
+                assert_eq!(palette[i * 3 + 0], reference.0[0]);
+                assert_eq!(palette[i * 3 + 1], reference.0[1]);
+                assert_eq!(palette[i * 3 + 2], reference.0[2]);
             }
         }
     } else if kind == ReadKind::Interleaved {
@@ -84,9 +84,9 @@ fn test_file(path: &Path, kind: ReadKind) {
 
                 let reference = reference_image.get_pixel(x as u32, y as u32);
 
-                assert_eq!(pcx_r, reference.data[0]);
-                assert_eq!(pcx_g, reference.data[1]);
-                assert_eq!(pcx_b, reference.data[2]);
+                assert_eq!(pcx_r, reference.0[0]);
+                assert_eq!(pcx_g, reference.0[1]);
+                assert_eq!(pcx_b, reference.0[2]);
             }
         }
     } else {
@@ -112,9 +112,9 @@ fn test_file(path: &Path, kind: ReadKind) {
                 let pcx_b = image_b[y as usize][x as usize];
 
                 let reference_pixel = reference_image.get_pixel(x as u32, y as u32);
-                let reference_r = reference_pixel.data[0];
-                let reference_g = reference_pixel.data[1];
-                let reference_b = reference_pixel.data[2];
+                let reference_r = reference_pixel.0[0];
+                let reference_g = reference_pixel.0[1];
+                let reference_b = reference_pixel.0[2];
 
                 assert_eq!(pcx_r, reference_r);
                 assert_eq!(pcx_g, reference_g);
