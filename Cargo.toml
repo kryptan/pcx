@@ -8,7 +8,7 @@ homepage = "https://github.com/kryptan/pcx"
 repository = "https://github.com/kryptan/pcx"
 readme = "README.md"
 keywords = ["pcx", "image", "paintbrush"]
-license = "WTFPL"
+license = "MIT OR Apache-2.0 OR WTFPL"
 exclude = ["/test-data"]
 edition = "2021"
 

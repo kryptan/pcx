@@ -8,4 +8,16 @@ Add it to you dependencies:
 
 See [API documentation](https://docs.rs/pcx/) for more info.
 
-Released under [WTFPL license](http://www.wtfpl.net/).
+
+License
+=======
+
+This project is licensed under either of
+
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+   https://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or
+   https://opensource.org/licenses/MIT)
+ * WTFPL license ([LICENSE-WTFPL](LICENSE-WTFPL) or http://www.wtfpl.net/about)
+
+at your option.
