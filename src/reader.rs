@@ -40,6 +40,13 @@ impl Reader<io::BufReader<File>> {
     }
 }
 
+impl<'a> Reader<io::Cursor<&'a [u8]>> {
+    /// Start reading PCX file from memory buffer.
+    pub fn from_mem(data: &'a [u8]) -> io::Result<Self> {
+        Self::new(io::Cursor::new(data))
+    }
+}
+
 impl<R: io::Read> Reader<R> {
     /// Start reading PCX file.
     pub fn new(mut stream: R) -> io::Result<Self> {
@@ -101,6 +108,7 @@ impl<R: io::Read> Reader<R> {
             self.next_lane(buffer)?;
         } else if self.header.number_of_color_planes == 1 {
             // All packed formats, max. 16 colors.
+            let width = self.width() as usize;
             let lane_length = self.header.lane_proper_length() as usize;
             let buffer_len = buffer.len();
             let offset = buffer.len() - lane_length;
@@ -109,15 +117,24 @@ impl<R: io::Read> Reader<R> {
             self.next_lane(&mut buffer[offset..buffer_len])?;
 
             macro_rules! unpack_bits {
-                ($bits:expr) => {
-                    for i in 0..lane_length {
-                        for j in 0..(8 / $bits) {
-                            buffer[i * (8 / $bits) + j] = (buffer[offset + i]
+                ($bits:expr) => {{
+                    let n = 8 / $bits;
+
+                    for i in 0..(width * $bits) / 8 {
+                        for j in 0..n {
+                            buffer[i * n + j] = (buffer[offset + i]
                                 & (((1 << $bits) - 1) << (8 - $bits * (j + 1))))
                                 >> (8 - $bits * (j + 1));
                         }
                     }
-                };
+
+                    let i = (width * $bits) / 8;
+                    for j in 0..width - i * n {
+                        buffer[i * n + j] = (buffer[offset + i]
+                            & (((1 << $bits) - 1) << (8 - $bits * (j + 1))))
+                            >> (8 - $bits * (j + 1));
+                    }
+                }};
             }
 
             // Unpack packed bits into bytes.

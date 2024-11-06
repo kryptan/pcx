@@ -35,8 +35,6 @@ fn test_file(path: &Path, kind: ReadKind) {
                 let index = ((y as usize * pcx.width() as usize) + x as usize) * 3;
                 let reference = reference_image.get_pixel(x as u32, y as u32);
 
-                //dbg!((x, y));
-
                 assert_eq!(buffer[index + 0], reference.data[0]);
                 assert_eq!(buffer[index + 1], reference.data[1]);
                 assert_eq!(buffer[index + 2], reference.data[2]);

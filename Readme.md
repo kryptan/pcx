@@ -1,5 +1,5 @@
 Library for reading and writing PCX images for Rust
-=======================
+===================================================
 
 Add it to you dependencies:
 
@@ -21,3 +21,5 @@ This project is licensed under either of
  * WTFPL license ([LICENSE-WTFPL](LICENSE-WTFPL) or http://www.wtfpl.net/about)
 
 at your option.
+
+Note that these licenses do not cover the test images (test-data folder).

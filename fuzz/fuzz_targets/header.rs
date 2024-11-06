@@ -1,7 +1,5 @@
 #![no_main]
-#[macro_use]
-extern crate libfuzzer_sys;
-extern crate pcx;
+use libfuzzer_sys::fuzz_target;
 use pcx::low_level::Header;
 
 fuzz_target!(|data: &[u8]| {

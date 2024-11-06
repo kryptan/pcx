@@ -1,6 +1,6 @@
 //! PCX file header.
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::low_level::MAGIC_BYTE;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{io, u16};
 
 /*
@@ -79,7 +79,7 @@ fn error<T>(msg: &str) -> io::Result<T> {
 }
 
 fn lane_proper_length(width: u16, bit_depth: u8) -> u16 {
-    ((u32::from(width) * u32::from(bit_depth) - 1) / 8 + 1) as u16
+    (u32::from(width) * u32::from(bit_depth)).div_ceil(8) as u16
 }
 
 impl Header {
@@ -119,6 +119,9 @@ impl Header {
         }
 
         let (width, height) = (x_end - x_start + 1, y_end - y_start + 1);
+        if width == 0 || height == 0 {
+            return error("PCX: invalid dimensions");
+        }
 
         let x_dpi = stream.read_u16::<LittleEndian>()?;
         let y_dpi = stream.read_u16::<LittleEndian>()?;
@@ -138,15 +141,20 @@ impl Header {
 
         // Must be one of the supported formats.
         match (number_of_color_planes, bit_depth) {
-            (3, 8) | // 24-bit RGB
-            (1, 1) | // monochrome
-            (1, 2) | // 4-color palette
-            (1, 4) | // 16-color palette
-            (1, 8) | // 256-color palette
-            (2, 1) |
-            (3, 1) |
-            (4, 1) => {},
+            | (3, 8) // 24-bit RGB
+            | (1, 1) // monochrome
+            | (1, 2) // 4-color palette
+            | (1, 4) // 16-color palette
+            | (1, 8) // 256-color palette
+            | (2, 1)
+            | (3, 1) // 8 colors
+            | (4, 1) // 16 colors
+            => {},
             _ => return error("PCX: invalid or unsupported color format"),
+        }
+
+        if number_of_color_planes > 1 && bit_depth < 8 && width < number_of_color_planes as u16 {
+            return error("PCX: unsupported dimensions");
         }
 
         if lane_length < lane_proper_length(width, bit_depth) {
