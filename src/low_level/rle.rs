@@ -5,7 +5,7 @@ use std::io;
 /// Decompress RLE.
 #[derive(Clone, Debug)]
 pub struct Decompressor<S: io::Read> {
-    stream: S,
+    pub(crate) stream: S,
 
     run_count: u8,
     run_value: u8,

@@ -250,33 +250,8 @@ impl<R: io::Read> Reader<R> {
     /// Returns number of colors in palette or zero if there is no palette. The actual number of bytes written to the output buffer is
     /// equal to the returned value multiplied by 3. Format of the output buffer is R, G, B, R, G, B, ...
     pub fn read_palette(self, buffer: &mut [u8]) -> io::Result<usize> {
-        match self.header.palette_length() {
-            Some(2) => {
-                // Special case - monochrome image.
-
-                // Black.
-                buffer[0] = 0;
-                buffer[1] = 0;
-                buffer[2] = 0;
-
-                // White.
-                buffer[3] = 255;
-                buffer[4] = 255;
-                buffer[5] = 255;
-
-                return Ok(2 as usize);
-            }
-            Some(palette_length @ 1..=16) => {
-                // Palettes of 16 colors or smaller are stored in the header.
-                for i in 0..(palette_length as usize) {
-                    (&mut buffer[(i * 3)..((i + 1) * 3)]).copy_from_slice(&self.header.palette[i]);
-                }
-                return Ok(palette_length as usize);
-            }
-            Some(256) => {
-                // 256-color palette is located at the end of file, we will read it below.
-            }
-            _ => return Ok(0),
+        if let Some(palette_size) = self.get_small_palette(buffer) {
+            return Ok(palette_size);
         }
 
         // Stop decompressing and continue reading underlying stream.
@@ -313,6 +288,77 @@ impl<R: io::Read> Reader<R> {
                 return Ok(256);
             }
         }
+    }
+
+    fn get_small_palette(&self, buffer: &mut [u8]) -> Option<usize> {
+        match self.header.palette_length() {
+            Some(2) => {
+                // Special case - monochrome image.
+
+                // Black.
+                buffer[0] = 0;
+                buffer[1] = 0;
+                buffer[2] = 0;
+
+                // White.
+                buffer[3] = 255;
+                buffer[4] = 255;
+                buffer[5] = 255;
+
+                return Some(2 as usize);
+            }
+            Some(palette_length @ 1..=16) => {
+                // Palettes of 16 colors or smaller are stored in the header.
+                for i in 0..(palette_length as usize) {
+                    (&mut buffer[(i * 3)..((i + 1) * 3)]).copy_from_slice(&self.header.palette[i]);
+                }
+                return Some(palette_length as usize);
+            }
+            Some(256) => {
+                // 256-color palette is located at the end of file.
+                None
+            }
+            _ => return Some(0),
+        }
+    }
+}
+
+impl<R: io::Seek + io::Read> Reader<R> {
+    /// Get color palette.
+    ///
+    /// Returns number of colors in palette or zero if there is no palette. The actual number of bytes written to the output buffer is
+    /// equal to the returned value multiplied by 3. Format of the output buffer is R, G, B, R, G, B, ...
+    pub fn get_palette(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        if let Some(palette_size) = self.get_small_palette(buffer) {
+            return Ok(palette_size);
+        }
+
+        let stream = match &mut self.pixel_reader {
+            PixelReader::Compressed(decompressor) => &mut decompressor.stream,
+            PixelReader::NotCompressed(stream) => stream,
+        };
+
+        let original_pos = stream.stream_position()?;
+
+        stream.seek(io::SeekFrom::End(-256 * 3 - 1))?;
+        let result = Self::get_palette_impl(stream, buffer);
+        stream.seek(io::SeekFrom::Start(original_pos))?;
+        result?;
+
+        Ok(256)
+    }
+
+    fn get_palette_impl(stream: &mut R, buffer: &mut [u8]) -> io::Result<()> {
+        let mut magic = [0];
+        stream.read_exact(&mut magic)?;
+        if magic[0] != PALETTE_START {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "no 256-color palette",
+            ));
+        }
+
+        stream.read_exact(&mut buffer[0..256 * 3])
     }
 }
 

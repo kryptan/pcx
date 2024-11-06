@@ -21,15 +21,16 @@ fn test_file(path: &Path, interleaved: bool) {
 
     if pcx.is_paletted() {
         print!("paletted ");
+
+        let mut palette = [0; 256 * 3];
+        pcx.get_palette(&mut palette).unwrap();
+
         let mut image = Vec::new();
         for _ in 0..pcx.height() {
             let mut row: Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
             pcx.next_row_paletted(&mut row).unwrap();
             image.push(row);
         }
-
-        let mut palette = [0; 256 * 3];
-        pcx.read_palette(&mut palette).unwrap();
 
         for y in 0..reference_image.height() {
             for x in 0..reference_image.width() {
