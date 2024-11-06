@@ -1,8 +1,8 @@
-use std::path::Path;
+use image;
 use std::fs::File;
+use std::path::Path;
 use std::{io, iter};
 use walkdir::WalkDir;
-use image;
 
 use Reader;
 
@@ -11,7 +11,8 @@ fn test_file(path: &Path, interleaved: bool) {
 
     let png_path = path.with_extension("png");
     let png_file = File::open(png_path).unwrap();
-    let reference_image = image::load(io::BufReader::new(png_file), image::ImageFormat::PNG).unwrap();
+    let reference_image =
+        image::load(io::BufReader::new(png_file), image::ImageFormat::PNG).unwrap();
     let reference_image = reference_image.to_rgb();
 
     let mut pcx = Reader::from_file(path).unwrap();

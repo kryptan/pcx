@@ -1,6 +1,6 @@
 //! Low-level handling of PCX. You generally don't need to use this module.
-pub mod rle;
 pub mod header;
+pub mod rle;
 
 pub use self::header::Header;
 

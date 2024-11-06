@@ -1,6 +1,6 @@
 //! PCX file header.
-use std::{io, u16};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::{io, u16};
 
 use low_level::MAGIC_BYTE;
 
@@ -111,7 +111,11 @@ impl Header {
         let x_end = stream.read_u16::<LittleEndian>()?;
         let y_end = stream.read_u16::<LittleEndian>()?;
 
-        if x_end < x_start || y_end < y_start || x_end - x_start == u16::MAX || y_end - y_start == u16::MAX {
+        if x_end < x_start
+            || y_end < y_start
+            || x_end - x_start == u16::MAX
+            || y_end - y_start == u16::MAX
+        {
             return error("PCX: invalid dimensions");
         }
 
@@ -176,20 +180,33 @@ impl Header {
     pub fn palette_length(&self) -> Option<u16> {
         match (self.number_of_color_planes, self.bit_depth) {
             (3, 8) => None,
-            (number_of_color_planes, bit_depth) => Some(1 << (u16::from(bit_depth) * u16::from(number_of_color_planes))),
+            (number_of_color_planes, bit_depth) => {
+                Some(1 << (u16::from(bit_depth) * u16::from(number_of_color_planes)))
+            }
         }
     }
 }
 
 /// Write header to the stream.
-pub fn write<W: io::Write>(stream: &mut W, paletted: bool, size: (u16, u16), dpi: (u16, u16)) -> io::Result<()> {
+pub fn write<W: io::Write>(
+    stream: &mut W,
+    paletted: bool,
+    size: (u16, u16),
+    dpi: (u16, u16),
+) -> io::Result<()> {
     if size.0 == 0xFFFF {
         // we'll need to round width up to even number which is not possible for 0xFFFF due to overflow
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with width equal to 0xFFFF"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "cannot save PCX with width equal to 0xFFFF",
+        ));
     }
 
     if size.0 == 0 || size.1 == 0 {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput, "cannot save PCX with zero size"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "cannot save PCX with zero size",
+        ));
     }
 
     // Write header.
@@ -205,7 +222,7 @@ pub fn write<W: io::Write>(stream: &mut W, paletted: bool, size: (u16, u16), dpi
     stream.write_u16::<LittleEndian>(dpi.1)?;
 
     // Write 16-color palette (not used as we will use 256-color palette instead).
-    stream.write_all(&[0u8; 16*3])?;
+    stream.write_all(&[0u8; 16 * 3])?;
 
     let lane_length = size.0 + (size.0 & 1); // width rounded up to even
 
@@ -222,7 +239,9 @@ pub fn write<W: io::Write>(stream: &mut W, paletted: bool, size: (u16, u16), dpi
 
 #[test]
 fn fuzzer_test_case() {
-    let mut data: &[u8] = &[0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
+    let mut data: &[u8] = &[
+        0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff,
+    ];
 
     // Check that it loads without panic.
     assert!(Header::load(&mut data).is_err());

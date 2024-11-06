@@ -36,14 +36,14 @@
 
 extern crate byteorder;
 #[cfg(test)]
-extern crate walkdir;
-#[cfg(test)]
 extern crate image;
+#[cfg(test)]
+extern crate walkdir;
 
 use std::io;
 
 pub use reader::Reader;
-pub use writer::{WriterRgb, WriterPaletted};
+pub use writer::{WriterPaletted, WriterRgb};
 
 pub mod low_level;
 mod reader;
@@ -60,7 +60,7 @@ fn user_error<T>(error: &str) -> io::Result<T> {
 #[cfg(test)]
 mod tests {
     use std::iter;
-    use {Reader, WriterRgb, WriterPaletted};
+    use {Reader, WriterPaletted, WriterRgb};
 
     fn round_trip_rgb_separate(width: u16, height: u16) {
         let mut pcx = Vec::new();
@@ -91,7 +91,9 @@ mod tests {
         let mut b: Vec<u8> = iter::repeat(0).take(width as usize).collect();
 
         for y in 0..height {
-            reader.next_row_rgb_separate(&mut r, &mut g, &mut b).unwrap();
+            reader
+                .next_row_rgb_separate(&mut r, &mut g, &mut b)
+                .unwrap();
 
             for x in 0..width {
                 assert_eq!(r[x as usize], 88);
@@ -104,7 +106,9 @@ mod tests {
     fn round_trip_rgb_interleaved(width: u16, height: u16) {
         let mut pcx = Vec::new();
 
-        let written_rgb: Vec<u8> = (0..(width as usize) * 3).map(|v| (v & 0xFF) as u8).collect();
+        let written_rgb: Vec<u8> = (0..(width as usize) * 3)
+            .map(|v| (v & 0xFF) as u8)
+            .collect();
         {
             let mut writer = WriterRgb::new(&mut pcx, (width, height), (300, 300)).unwrap();
 

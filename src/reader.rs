@@ -1,11 +1,11 @@
+use byteorder::ReadBytesExt;
+use std::fs::File;
 use std::io;
 use std::path::Path;
-use std::fs::File;
-use byteorder::ReadBytesExt;
 
-use user_error;
-use low_level::{Header, PALETTE_START};
 use low_level::rle::Decompressor;
+use low_level::{Header, PALETTE_START};
+use user_error;
 
 #[derive(Clone, Debug)]
 enum PixelReader<R: io::Read> {
@@ -111,11 +111,13 @@ impl<R: io::Read> Reader<R> {
             macro_rules! unpack_bits {
                 ($bits:expr) => {
                     for i in 0..lane_length {
-                        for j in 0..(8/$bits) {
-                            buffer[i*(8/$bits) + j] = (buffer[offset + i] & (((1 << $bits) - 1) << (8 - $bits*(j + 1)))) >> (8 - $bits*(j + 1));
+                        for j in 0..(8 / $bits) {
+                            buffer[i * (8 / $bits) + j] = (buffer[offset + i]
+                                & (((1 << $bits) - 1) << (8 - $bits * (j + 1))))
+                                >> (8 - $bits * (j + 1));
                         }
                     }
-                }
+                };
             }
 
             // Unpack packed bits into bytes.
@@ -168,7 +170,12 @@ impl<R: io::Read> Reader<R> {
     /// `r`, `g`, `b` buffer lengths must be equal to the image width.
     ///
     /// Order of rows is from top to bottom, order of pixels is from left to right.
-    pub fn next_row_rgb_separate(&mut self, r: &mut [u8], g: &mut [u8], b: &mut [u8]) -> io::Result<()> {
+    pub fn next_row_rgb_separate(
+        &mut self,
+        r: &mut [u8],
+        g: &mut [u8],
+        b: &mut [u8],
+    ) -> io::Result<()> {
         if self.is_paletted() {
             return user_error("pcx::Reader::next_row_rgb_separate called on paletted image");
         }
@@ -209,7 +216,9 @@ impl<R: io::Read> Reader<R> {
     }
 
     fn skip_padding(&mut self) -> io::Result<()> {
-        if self.num_lanes_read + 1 < u32::from(self.height()) * u32::from(self.header.number_of_color_planes) {
+        if self.num_lanes_read + 1
+            < u32::from(self.height()) * u32::from(self.header.number_of_color_planes)
+        {
             // Skip padding.
             for _ in 0..self.header.lane_padding() {
                 self.pixel_reader.read_u8()?;
@@ -290,11 +299,16 @@ impl<R: io::Read> Reader<R> {
             } else {
                 // We've reached the end of file, therefore temp_buffer must now contain the palette.
                 if temp_buffer[pos] != PALETTE_START {
-                    return Err(io::Error::new(io::ErrorKind::InvalidData, "no 256-color palette"));
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "no 256-color palette",
+                    ));
                 }
 
-                buffer[0..(TEMP_BUFFER_LENGTH - pos - 1)].copy_from_slice(&temp_buffer[(pos + 1)..TEMP_BUFFER_LENGTH]);
-                buffer[(TEMP_BUFFER_LENGTH - pos - 1)..PALETTE_LENGTH].copy_from_slice(&temp_buffer[0..pos]);
+                buffer[0..(TEMP_BUFFER_LENGTH - pos - 1)]
+                    .copy_from_slice(&temp_buffer[(pos + 1)..TEMP_BUFFER_LENGTH]);
+                buffer[(TEMP_BUFFER_LENGTH - pos - 1)..PALETTE_LENGTH]
+                    .copy_from_slice(&temp_buffer[0..pos]);
 
                 return Ok(256);
             }
@@ -357,7 +371,9 @@ mod tests {
         let mut g: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
         let mut b: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
         for _ in 0..reader.height() {
-            reader.next_row_rgb_separate(&mut r[..], &mut g[..], &mut b[..]).unwrap();
+            reader
+                .next_row_rgb_separate(&mut r[..], &mut g[..], &mut b[..])
+                .unwrap();
         }
 
         let mut palette = [0; 0];

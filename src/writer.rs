@@ -1,13 +1,13 @@
+use byteorder::WriteBytesExt;
+use std::fs::File;
 use std::io;
 use std::io::Write;
-use std::fs::File;
 use std::path::Path;
-use byteorder::WriteBytesExt;
 
-use user_error;
 use low_level::header;
 use low_level::rle::Compressor;
 use low_level::PALETTE_START;
+use user_error;
 
 /// Create 24-bit RGB PCX image.
 #[derive(Clone, Debug)]
@@ -29,7 +29,11 @@ impl WriterRgb<io::BufWriter<File>> {
     /// Start writing PCX file. This function will create a file if it does not exist, and will overwrite it if it does.
     ///
     /// If you are not sure what to pass to `dpi` value just use something like `(100, 100)` or `(300, 300)`.
-    pub fn create_file<P: AsRef<Path>>(path: P, image_size: (u16, u16), dpi: (u16, u16)) -> io::Result<Self> {
+    pub fn create_file<P: AsRef<Path>>(
+        path: P,
+        image_size: (u16, u16),
+        dpi: (u16, u16),
+    ) -> io::Result<Self> {
         let file = File::create(path)?;
         Self::new(io::BufWriter::new(file), image_size, dpi)
     }
@@ -39,7 +43,11 @@ impl WriterPaletted<io::BufWriter<File>> {
     /// Start writing PCX file. This function will create a file if it does not exist, and will overwrite it if it does.
     ///
     /// If you are not sure what to pass to `dpi` value just use something like `(100, 100)` or `(300, 300)`.
-    pub fn create_file<P: AsRef<Path>>(path: P, image_size: (u16, u16), dpi: (u16, u16)) -> io::Result<Self> {
+    pub fn create_file<P: AsRef<Path>>(
+        path: P,
+        image_size: (u16, u16),
+        dpi: (u16, u16),
+    ) -> io::Result<Self> {
         let file = File::create(path)?;
         Self::new(io::BufWriter::new(file), image_size, dpi)
     }
@@ -69,7 +77,9 @@ impl<W: io::Write> WriterRgb<W> {
     /// Order of rows is from top to bottom, order of pixels is from left to right.
     pub fn write_row_from_separate(&mut self, r: &[u8], g: &[u8], b: &[u8]) -> io::Result<()> {
         if self.num_rows_left == 0 {
-            return user_error("pcx::WriterRgb::write_row_from_separate: all rows were already written");
+            return user_error(
+                "pcx::WriterRgb::write_row_from_separate: all rows were already written",
+            );
         }
 
         let width = self.width as usize;
