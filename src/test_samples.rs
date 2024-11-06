@@ -6,7 +6,14 @@ use walkdir::WalkDir;
 
 use crate::Reader;
 
-fn test_file(path: &Path, interleaved: bool) {
+#[derive(Eq, PartialEq)]
+enum ReadKind {
+    Separate,
+    Interleaved,
+    Entire,
+}
+
+fn test_file(path: &Path, kind: ReadKind) {
     print!("{} ", path.display());
 
     let png_path = path.with_extension("png");
@@ -18,6 +25,25 @@ fn test_file(path: &Path, interleaved: bool) {
     let mut pcx = Reader::from_file(path).unwrap();
     assert_eq!(pcx.width() as u32, reference_image.width());
     assert_eq!(pcx.height() as u32, reference_image.height());
+
+    if kind == ReadKind::Entire {
+        let mut buffer = vec![0; pcx.width() as usize * pcx.height() as usize * 3];
+        pcx.read_rgb_pixels(&mut buffer).unwrap();
+
+        for y in 0..reference_image.height() {
+            for x in 0..reference_image.width() {
+                let index = ((y as usize * pcx.width() as usize) + x as usize) * 3;
+                let reference = reference_image.get_pixel(x as u32, y as u32);
+
+                //dbg!((x, y));
+
+                assert_eq!(buffer[index + 0], reference.data[0]);
+                assert_eq!(buffer[index + 1], reference.data[1]);
+                assert_eq!(buffer[index + 2], reference.data[2]);
+            }
+        }
+        return;
+    }
 
     if pcx.is_paletted() {
         print!("paletted ");
@@ -35,21 +61,14 @@ fn test_file(path: &Path, interleaved: bool) {
         for y in 0..reference_image.height() {
             for x in 0..reference_image.width() {
                 let i = image[y as usize][x as usize] as usize;
-                let pcx_r = palette[i * 3 + 0];
-                let pcx_g = palette[i * 3 + 1];
-                let pcx_b = palette[i * 3 + 2];
+                let reference = reference_image.get_pixel(x as u32, y as u32);
 
-                let reference_pixel = reference_image.get_pixel(x as u32, y as u32);
-                let reference_r = reference_pixel.data[0];
-                let reference_g = reference_pixel.data[1];
-                let reference_b = reference_pixel.data[2];
-
-                assert_eq!(pcx_r, reference_r);
-                assert_eq!(pcx_g, reference_g);
-                assert_eq!(pcx_b, reference_b);
+                assert_eq!(palette[i * 3 + 0], reference.data[0]);
+                assert_eq!(palette[i * 3 + 1], reference.data[1]);
+                assert_eq!(palette[i * 3 + 2], reference.data[2]);
             }
         }
-    } else if interleaved {
+    } else if kind == ReadKind::Interleaved {
         print!("not paletted ");
 
         let mut image = Vec::new();
@@ -65,14 +84,11 @@ fn test_file(path: &Path, interleaved: bool) {
                 let pcx_g = image[y as usize][(x as usize) * 3 + 1];
                 let pcx_b = image[y as usize][(x as usize) * 3 + 2];
 
-                let reference_pixel = reference_image.get_pixel(x as u32, y as u32);
-                let reference_r = reference_pixel.data[0];
-                let reference_g = reference_pixel.data[1];
-                let reference_b = reference_pixel.data[2];
+                let reference = reference_image.get_pixel(x as u32, y as u32);
 
-                assert_eq!(pcx_r, reference_r);
-                assert_eq!(pcx_g, reference_g);
-                assert_eq!(pcx_b, reference_b);
+                assert_eq!(pcx_r, reference.data[0]);
+                assert_eq!(pcx_g, reference.data[1]);
+                assert_eq!(pcx_b, reference.data[2]);
             }
         }
     } else {
@@ -119,8 +135,9 @@ fn test_files(path: &str) {
         if let Some(ext) = entry.path().extension() {
             let ext = ext.to_str().unwrap();
             if ext == "pcx" || ext == "PCX" {
-                test_file(entry.path(), false);
-                test_file(entry.path(), true);
+                test_file(entry.path(), ReadKind::Interleaved);
+                test_file(entry.path(), ReadKind::Separate);
+                test_file(entry.path(), ReadKind::Entire);
             }
         }
     }

@@ -249,6 +249,8 @@ impl<R: io::Read> Reader<R> {
     ///
     /// Returns number of colors in palette or zero if there is no palette. The actual number of bytes written to the output buffer is
     /// equal to the returned value multiplied by 3. Format of the output buffer is R, G, B, R, G, B, ...
+    ///
+    /// Consider using `get_palette` instead.
     pub fn read_palette(self, buffer: &mut [u8]) -> io::Result<usize> {
         if let Some(palette_size) = self.get_small_palette(buffer) {
             return Ok(palette_size);
@@ -324,6 +326,39 @@ impl<R: io::Read> Reader<R> {
 }
 
 impl<R: io::Seek + io::Read> Reader<R> {
+    /// Read the entire RGB image, converting from paletted to RGB if necessarry.
+    ///
+    /// `rgb` buffer length must be equal to width*height*3.
+    ///
+    /// Order of rows is from top to bottom, order of pixels is from left to right. Format of the
+    /// output buffer is R, G, B, R, G, B, ...
+    pub fn read_rgb_pixels(&mut self, rgb: &mut [u8]) -> io::Result<()> {
+        let width = self.width() as usize;
+        let height = self.height() as usize;
+        let row_size = width * 3;
+
+        if self.is_paletted() {
+            let mut palette = [0; 256 * 3];
+            self.get_palette(&mut palette)?;
+
+            for y in 0..height {
+                self.next_row_paletted(&mut rgb[y * row_size..(y * row_size + width)])?;
+                for x in (0..width).rev() {
+                    let color_index = rgb[y * row_size + x] as usize;
+                    rgb[y * row_size + x * 3 + 0] = palette[color_index * 3 + 0];
+                    rgb[y * row_size + x * 3 + 1] = palette[color_index * 3 + 1];
+                    rgb[y * row_size + x * 3 + 2] = palette[color_index * 3 + 2];
+                }
+            }
+        } else {
+            for y in 0..height {
+                self.next_row_rgb(&mut rgb[y * row_size..(y + 1) * row_size])?;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Get color palette.
     ///
     /// Returns number of colors in palette or zero if there is no palette. The actual number of bytes written to the output buffer is

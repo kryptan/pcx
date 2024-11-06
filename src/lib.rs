@@ -5,18 +5,8 @@
 //!     let mut reader = pcx::Reader::from_file("test-data/marbles.pcx").unwrap();
 //!     println!("width = {}, height = {}, paletted = {}", reader.width(), reader.height(), reader.is_paletted());
 //! 
-//!     let mut palette = [0; 256 * 3];
-//!     if reader.is_paletted() {
-//!         reader.get_palette(&mut palette).unwrap();
-//!     }
-//! 
-//!     for y in 0..reader.height() {
-//!         if reader.is_paletted() {
-//!             // call reader.next_row_paletted(...) to read the next row
-//!         } else {
-//!             // call reader.next_row_rgb(...) or reader.next_row_rgb_separate(...) to read the next row
-//!         }
-//!     }
+//!     let mut buffer = vec![0; reader.width() as usize * reader.height() as usize * 3];
+//!     reader.read_rgb_pixels(&mut buffer).unwrap();
 //! 
 //! Example of writing a PCX image:
 //!
