@@ -4,10 +4,10 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
-use low_level::header;
-use low_level::rle::Compressor;
-use low_level::PALETTE_START;
-use user_error;
+use crate::low_level::header;
+use crate::low_level::rle::Compressor;
+use crate::low_level::PALETTE_START;
+use crate::user_error;
 
 /// Create 24-bit RGB PCX image.
 #[derive(Clone, Debug)]

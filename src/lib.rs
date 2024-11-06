@@ -43,8 +43,8 @@ extern crate walkdir;
 
 use std::io;
 
-pub use reader::Reader;
-pub use writer::{WriterPaletted, WriterRgb};
+pub use crate::reader::Reader;
+pub use crate::writer::{WriterPaletted, WriterRgb};
 
 pub mod low_level;
 mod reader;
@@ -61,7 +61,7 @@ fn user_error<T>(error: &str) -> io::Result<T> {
 #[cfg(test)]
 mod tests {
     use std::iter;
-    use {Reader, WriterPaletted, WriterRgb};
+    use crate::{Reader, WriterPaletted, WriterRgb};
 
     fn round_trip_rgb_separate(width: u16, height: u16) {
         let mut pcx = Vec::new();

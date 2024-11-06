@@ -3,9 +3,9 @@ use std::fs::File;
 use std::io;
 use std::path::Path;
 
-use low_level::rle::Decompressor;
-use low_level::{Header, PALETTE_START};
-use user_error;
+use crate::low_level::rle::Decompressor;
+use crate::low_level::{Header, PALETTE_START};
+use crate::user_error;
 
 #[derive(Clone, Debug)]
 enum PixelReader<R: io::Read> {
@@ -321,7 +321,7 @@ mod tests {
     use std::iter;
 
     use super::Reader;
-    use low_level::header;
+    use crate::low_level::header;
 
     #[test]
     fn gmarbles() {

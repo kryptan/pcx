@@ -10,6 +10,7 @@ readme = "README.md"
 keywords = ["pcx", "image", "paintbrush"]
 license = "WTFPL"
 exclude = ["/test-data"]
+edition = "2021"
 
 [dependencies]
 byteorder = "1.2.6"

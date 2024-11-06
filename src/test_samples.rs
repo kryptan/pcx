@@ -4,7 +4,7 @@ use std::path::Path;
 use std::{io, iter};
 use walkdir::WalkDir;
 
-use Reader;
+use crate::Reader;
 
 fn test_file(path: &Path, interleaved: bool) {
     print!("{} ", path.display());
