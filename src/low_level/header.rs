@@ -153,10 +153,6 @@ impl Header {
             _ => return error("PCX: invalid or unsupported color format"),
         }
 
-        if number_of_color_planes > 1 && bit_depth < 8 && width < number_of_color_planes as u16 {
-            return error("PCX: unsupported dimensions");
-        }
-
         if lane_length < lane_proper_length(width, bit_depth) {
             return error("PCX: invalid lane length");
         }

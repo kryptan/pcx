@@ -145,37 +145,24 @@ impl<R: io::Read> Reader<R> {
                 _ => unreachable!(), // bit depth was checked while reading the header
             }
         } else {
+            assert!(self.header.bit_depth == 1);
             // Planar, 4, 8 or 16 colors.
             let lane_length = self.header.lane_proper_length() as usize;
             let number_of_color_planes = self.header.number_of_color_planes as usize;
-            let half_len = buffer.len() / 2;
 
-            // Place packed rows at the first half of the buffer, this will allow us to easily unpack them.
-            for i in 0..number_of_color_planes {
-                self.next_lane(&mut buffer[(lane_length * i)..(lane_length * (i + 1))])?;
-            }
+            buffer.fill(0);
 
-            for x in 0..self.width() {
-                let m = 0x80 >> (x & 7);
-                let mut v = 0;
-                for i in (0..number_of_color_planes).rev() {
-                    v <<= 1;
-                    v += if buffer[i * lane_length + (x as usize >> 3)] & m != 0 {
-                        1
-                    } else {
-                        0
-                    };
+            for d in 0..number_of_color_planes {
+                for j in 0..lane_length {
+                    let val = self.pixel_reader.read_u8()?;
+
+                    for b in 0..8 {
+                        if 8 * j + b < buffer.len() {
+                            buffer[8 * j + b] |= ((val >> (7 - b)) & 0x1) << d;
+                        }
+                    }
                 }
-                if x % 2 == 0 {
-                    buffer[half_len + (x / 2) as usize] = v << 4;
-                } else {
-                    buffer[half_len + (x / 2) as usize] |= v;
-                }
-            }
-
-            for i in 0..half_len {
-                buffer[i * 2] = (buffer[half_len + i] & 0xF0) >> 4;
-                buffer[i * 2 + 1] = buffer[half_len + i] & 0xF;
+                self.skip_padding()?;
             }
         }
 
