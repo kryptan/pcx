@@ -9,7 +9,7 @@ repository = "https://github.com/kryptan/pcx"
 readme = "README.md"
 keywords = ["pcx", "image", "paintbrush"]
 license = "MIT OR Apache-2.0 OR WTFPL"
-exclude = ["/test-data"]
+exclude = ["/test-data", "/fuzz"]
 edition = "2021"
 
 [dependencies]

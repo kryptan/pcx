@@ -27,7 +27,7 @@ fuzz_target!(|data: &[u8]| {
             .write_row(&written_pixels[y as usize * row_len..(y as usize + 1) * row_len])
             .unwrap();
     }
-    drop(writer);
+    writer.finish().unwrap();
 
     let mut reader = Reader::from_mem(&pcx).unwrap();
     assert_eq!(reader.width(), width as u16);
@@ -35,7 +35,5 @@ fuzz_target!(|data: &[u8]| {
 
     let mut read_pixels = vec![0; size];
     reader.read_rgb_pixels(&mut read_pixels).unwrap();
-    if written_pixels != read_pixels {
-        panic!();
-    }
+    assert!(written_pixels == read_pixels);
 });
