@@ -6,5 +6,5 @@ fuzz_target!(|data: &[u8]| {
     let mut data = data;
 
     // Check that it loads without a panic.
-    let _ = Header::load(&mut data);
+    _ = Header::load(&mut data);
 });

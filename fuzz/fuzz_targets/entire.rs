@@ -13,5 +13,5 @@ fuzz_target!(|data: &[u8]| {
     }
 
     let mut buffer = vec![0; size];
-    let _ = pcx.read_rgb_pixels(&mut buffer);
+    _ = pcx.read_rgb_pixels(&mut buffer);
 });

@@ -12,7 +12,7 @@ use crate::user_error;
 /// Create 24-bit RGB PCX image.
 #[derive(Clone, Debug)]
 pub struct WriterRgb<W: io::Write> {
-    compressor: Compressor<W>,
+    stream: W,
     num_rows_left: u16,
     width: u16,
 }
@@ -20,7 +20,7 @@ pub struct WriterRgb<W: io::Write> {
 /// Create paletted PCX image.
 #[derive(Clone, Debug)]
 pub struct WriterPaletted<W: io::Write> {
-    compressor: Compressor<W>,
+    stream: W,
     num_rows_left: u16,
     width: u16,
 }
@@ -60,10 +60,8 @@ impl<W: io::Write> WriterRgb<W> {
     pub fn new(mut stream: W, image_size: (u16, u16), dpi: (u16, u16)) -> io::Result<Self> {
         header::write(&mut stream, false, image_size, dpi)?;
 
-        let lane_length = image_size.0 + (image_size.0 & 1); // width rounded up to even
-
         Ok(WriterRgb {
-            compressor: Compressor::new(stream, lane_length),
+            stream,
             width: image_size.0,
             num_rows_left: image_size.1,
         })
@@ -87,12 +85,9 @@ impl<W: io::Write> WriterRgb<W> {
             return user_error("pcx::WriterRgb::write_row_from_separate: buffer lengths must be equal to the width of the image");
         }
 
-        self.compressor.write_all(r)?;
-        self.compressor.pad()?;
-        self.compressor.write_all(g)?;
-        self.compressor.pad()?;
-        self.compressor.write_all(b)?;
-        self.compressor.pad()?;
+        compress(&mut self.stream, r)?;
+        compress(&mut self.stream, g)?;
+        compress(&mut self.stream, b)?;
 
         self.num_rows_left -= 1;
         Ok(())
@@ -113,11 +108,14 @@ impl<W: io::Write> WriterRgb<W> {
             return user_error("pcx::WriterRgb::write_row: buffer length must be equal to the width of the image multiplied by 3");
         }
 
+        let lane_length = self.width + (self.width & 1); // width rounded up to even
         for color in 0..3 {
+            let mut compressor = Compressor::new(&mut self.stream, lane_length);
             for x in 0..(self.width as usize) {
-                self.compressor.write_u8(rgb[x * 3 + color])?;
+                compressor.write_u8(rgb[x * 3 + color])?;
             }
-            self.compressor.pad()?;
+            compressor.pad()?;
+            compressor.finish()?;
         }
 
         self.num_rows_left -= 1;
@@ -132,13 +130,13 @@ impl<W: io::Write> WriterRgb<W> {
             return user_error("pcx::WriterRgb::finish: not all rows written");
         }
 
-        self.compressor.flush()
+        self.stream.flush()
     }
 }
 
 impl<W: io::Write> Drop for WriterRgb<W> {
     fn drop(&mut self) {
-        let _r = self.compressor.flush();
+        let _r = self.stream.flush();
     }
 }
 
@@ -149,10 +147,8 @@ impl<W: io::Write> WriterPaletted<W> {
     pub fn new(mut stream: W, image_size: (u16, u16), dpi: (u16, u16)) -> io::Result<Self> {
         header::write(&mut stream, true, image_size, dpi)?;
 
-        let lane_length = image_size.0 + (image_size.0 & 1); // width rounded up to even
-
         Ok(WriterPaletted {
-            compressor: Compressor::new(stream, lane_length),
+            stream,
             width: image_size.0,
             num_rows_left: image_size.1,
         })
@@ -172,9 +168,7 @@ impl<W: io::Write> WriterPaletted<W> {
         if row.len() != self.width as usize {
             return user_error("pcx::WriterPaletted::write_row: buffer length must be equal to the width of the image");
         }
-
-        self.compressor.write_all(row)?;
-        self.compressor.pad()?;
+        compress(&mut self.stream, row)?;
 
         self.num_rows_left -= 1;
         Ok(())
@@ -183,7 +177,7 @@ impl<W: io::Write> WriterPaletted<W> {
     /// Since palette is written to the end of PCX file this function must be called only after writing all the pixels.
     ///
     /// Palette length must be not larger than 256*3 = 768 bytes and be divisible by 3. Format is R, G, B, R, G, B, ...
-    pub fn write_palette(self, palette: &[u8]) -> io::Result<()> {
+    pub fn write_palette(mut self, palette: &[u8]) -> io::Result<()> {
         if self.num_rows_left != 0 {
             return user_error("pcx::WriterPaletted::write_palette: not all rows written");
         }
@@ -192,13 +186,21 @@ impl<W: io::Write> WriterPaletted<W> {
             return user_error("pcx::WriterPaletted::write_palette: incorrect palette length");
         }
 
-        let mut stream = self.compressor.finish()?;
-        stream.write_u8(PALETTE_START)?;
-        stream.write_all(palette)?;
+        self.stream.write_u8(PALETTE_START)?;
+        self.stream.write_all(palette)?;
         for _ in 0..(256 * 3 - palette.len()) {
-            stream.write_u8(0)?;
+            self.stream.write_u8(0)?;
         }
 
         Ok(())
     }
+}
+
+fn compress(stream: impl io::Write, row: &[u8]) -> io::Result<()> {
+    let lane_length = row.len() + (row.len() & 1); // width rounded up to even
+    let mut compressor = Compressor::new(stream, lane_length as u16);
+    compressor.write_all(row)?;
+    compressor.pad()?;
+    compressor.finish()?;
+    Ok(())
 }

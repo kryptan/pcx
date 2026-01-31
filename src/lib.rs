@@ -204,6 +204,6 @@ mod tests {
         let mut pcx = Reader::from_mem(data).unwrap();
         let size = pcx.width() as usize * pcx.height() as usize * 3;
         let mut buffer = vec![0; size];
-        let _ = pcx.read_rgb_pixels(&mut buffer);
+        _ = pcx.read_rgb_pixels(&mut buffer);
     }
 }
