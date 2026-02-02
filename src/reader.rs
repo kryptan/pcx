@@ -421,7 +421,7 @@ mod tests {
         let mut reader = Reader::new(read).unwrap();
 
         assert_eq!(reader.header.version, header::Version::V5);
-        assert_eq!(reader.header.is_compressed, true);
+        assert!(reader.header.is_compressed);
         assert_eq!(reader.header.bit_depth, 8);
         assert_eq!(reader.header.size, (141, 99));
         assert_eq!(reader.header.start, (0, 0));
