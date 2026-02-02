@@ -22,15 +22,8 @@ doc = false
 bench = false
 
 [[bin]]
-name = "header"
-path = "fuzz_targets/header.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "entire"
-path = "fuzz_targets/entire.rs"
+name = "read"
+path = "fuzz_targets/read.rs"
 test = false
 doc = false
 bench = false

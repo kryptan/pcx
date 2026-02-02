@@ -1,8 +1,8 @@
 use crate::Reader;
 use image;
 use std::fs::File;
+use std::io;
 use std::path::Path;
-use std::{io, iter};
 use walkdir::WalkDir;
 
 #[derive(Eq, PartialEq)]
@@ -50,7 +50,7 @@ fn test_file(path: &Path, kind: ReadKind) {
 
         let mut image = Vec::new();
         for _ in 0..pcx.height() {
-            let mut row: Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
+            let mut row: Vec<u8> = vec![0; pcx.width() as usize];
             pcx.next_row_paletted(&mut row).unwrap();
             image.push(row);
         }
@@ -70,7 +70,7 @@ fn test_file(path: &Path, kind: ReadKind) {
 
         let mut image = Vec::new();
         for _ in 0..pcx.height() {
-            let mut rgb: Vec<u8> = iter::repeat(0).take((pcx.width() as usize) * 3).collect();
+            let mut rgb: Vec<u8> = vec![0; (pcx.width() as usize) * 3];
             pcx.next_row_rgb(&mut rgb).unwrap();
             image.push(rgb);
         }
@@ -95,9 +95,9 @@ fn test_file(path: &Path, kind: ReadKind) {
         let mut image_g = Vec::new();
         let mut image_b = Vec::new();
         for _ in 0..pcx.height() {
-            let mut r: Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
-            let mut g: Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
-            let mut b: Vec<u8> = iter::repeat(0).take(pcx.width() as usize).collect();
+            let mut r: Vec<u8> = vec![0; pcx.width() as usize];
+            let mut g: Vec<u8> = vec![0; pcx.width() as usize];
+            let mut b: Vec<u8> = vec![0; pcx.width() as usize];
             pcx.next_row_rgb_separate(&mut r, &mut g, &mut b).unwrap();
             image_r.push(r);
             image_g.push(g);
@@ -152,7 +152,7 @@ fn samples() {
 fn samples2() {
     let samples_path = env!("CARGO_MANIFEST_DIR").to_string() + "/test-data2";
     if Path::new(&samples_path).exists() {
-        test_files(&samples_path, false);
+        test_files(&samples_path, true);
     }
 }
 

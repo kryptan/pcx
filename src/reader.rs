@@ -411,8 +411,6 @@ impl<R: io::Seek + io::Read> Reader<R> {
 
 #[cfg(test)]
 mod tests {
-    use std::iter;
-
     use super::Reader;
     use crate::low_level::header;
 
@@ -434,7 +432,7 @@ mod tests {
         assert!(reader.is_paletted());
         assert_eq!(reader.palette_length(), Some(256));
 
-        let mut row: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        let mut row: Vec<u8> = vec![0; reader.width() as usize];
         for _ in 0..reader.height() {
             reader.next_row_paletted(&mut row[..]).unwrap();
         }
@@ -460,9 +458,9 @@ mod tests {
 
         assert_eq!(reader.is_paletted(), false);
 
-        let mut r: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
-        let mut g: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
-        let mut b: Vec<u8> = iter::repeat(0).take(reader.width() as usize).collect();
+        let mut r: Vec<u8> = vec![0; reader.width() as usize];
+        let mut g: Vec<u8> = vec![0; reader.width() as usize];
+        let mut b: Vec<u8> = vec![0; reader.width() as usize];
         for _ in 0..reader.height() {
             reader
                 .next_row_rgb_separate(&mut r[..], &mut g[..], &mut b[..])

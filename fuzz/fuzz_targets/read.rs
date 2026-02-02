@@ -8,7 +8,7 @@ fuzz_target!(|data: &[u8]| {
     };
 
     let size = pcx.width() as usize * pcx.height() as usize * 3;
-    if size > 5000 {
+    if size > (10 << 16) {
         return;
     }
 
